@@ -1,0 +1,1 @@
+Corrección de textos, placeholders y manejo de errores visuales en el formulario de ventas.
