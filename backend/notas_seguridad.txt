@@ -1,0 +1,2 @@
+Optimización de seguridad en las API de Vantix POS.
+Cifrado de contraseñas implementado y validación de tokens JWT.
