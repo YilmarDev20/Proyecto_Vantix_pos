@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* ✅ OPTIMIZACIÓN: Añadimos fondo negro slate profundo y texto claro con transición suave de 200ms */
+  @apply bg-background text-secondary font-sans antialiased dark:bg-slate-950 dark:text-slate-200 transition-colors duration-200;
+}

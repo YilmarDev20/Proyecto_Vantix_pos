@@ -1,0 +1,17 @@
+# Frontend (React / Node)
+node_modules/
+dist/
+build/
+.env
+
+# Backend (Java / Spring Boot / Maven / Gradle)
+target/
+.gradle/
+build/
+*.class
+
+# IDEs y Sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
