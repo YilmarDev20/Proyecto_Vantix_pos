@@ -1,0 +1,1 @@
+Ajustes de paleta de colores corporativos para la interfaz del Punto de Venta.
