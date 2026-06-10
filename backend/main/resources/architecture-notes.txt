@@ -1,0 +1,1 @@
+Revisión de la arquitectura del backend: Conexión a base de datos y mapeo de entidades del POS.
