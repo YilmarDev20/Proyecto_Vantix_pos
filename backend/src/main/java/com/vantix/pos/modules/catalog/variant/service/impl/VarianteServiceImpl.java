@@ -1,5 +1,12 @@
 package com.vantix.pos.modules.catalog.variant.service.impl;
 
+import com.lowagie.text.Chunk;
+import com.lowagie.text.Document;
+import com.lowagie.text.Element;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import com.vantix.pos.modules.audit.event.AuditoriaEvent;
 import com.vantix.pos.modules.auth.security.SecurityUtils;
 import com.vantix.pos.modules.catalog.product.entity.Producto;
@@ -15,11 +22,17 @@ import com.vantix.pos.modules.inventory.stock.entity.InventarioTienda;
 import com.vantix.pos.modules.inventory.stock.repository.InventarioTiendaRepository;
 import com.vantix.pos.modules.store.entity.Tienda;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -83,7 +96,6 @@ public class VarianteServiceImpl implements VarianteService {
     @Override
     @Transactional
     public VarianteResponseDTO crear(VarianteRequestDTO requestDTO, Integer tiendaIdParam) {
-        // ✅ VALIDACIÓN DE RAÍZ: Evita pérdidas marginando precios inválidos en la creación
         if (requestDTO.getPrecioVenta() != null && requestDTO.getPrecioCompra() != null &&
                 requestDTO.getPrecioVenta().compareTo(requestDTO.getPrecioCompra()) < 0) {
             throw new IllegalArgumentException("El precio de venta no puede ser menor que el costo de compra.");
@@ -123,16 +135,12 @@ public class VarianteServiceImpl implements VarianteService {
             }
         }
 
-        // 1. Guardamos la variante base
         Variante varianteGuardada = varianteRepository.save(variante);
-
-        // 2. BUENA PRÁCTICA: Inicializar el InventarioTienda al nacer el producto
         Integer tiendaId = (tiendaIdParam != null) ? tiendaIdParam : SecurityUtils.getTiendaId();
 
         InventarioTienda inventarioInicial = new InventarioTienda();
         inventarioInicial.setVariante(varianteGuardada);
 
-        // Uso de proxy para evitar una consulta SELECT a la tabla Tienda (Optimización de Rendimiento)
         Tienda tiendaProxy = new Tienda();
         tiendaProxy.setId(tiendaId);
         inventarioInicial.setTienda(tiendaProxy);
@@ -142,7 +150,6 @@ public class VarianteServiceImpl implements VarianteService {
 
         inventarioTiendaRepository.save(inventarioInicial);
 
-        // 3. Mapeo final
         VarianteResponseDTO responseDTO = varianteMapper.toDto(varianteGuardada);
         responseDTO.setStockActual(inventarioInicial.getStockActual());
         responseDTO.setStockMinimo(inventarioInicial.getStockMinimo());
@@ -161,7 +168,6 @@ public class VarianteServiceImpl implements VarianteService {
     @Override
     @Transactional
     public VarianteResponseDTO actualizar(Integer id, VarianteRequestDTO requestDTO, Integer tiendaIdParam) {
-        // ✅ VALIDACIÓN DE RAÍZ: Evita pérdidas marginando precios inválidos en la actualización
         if (requestDTO.getPrecioVenta() != null && requestDTO.getPrecioCompra() != null &&
                 requestDTO.getPrecioVenta().compareTo(requestDTO.getPrecioCompra()) < 0) {
             throw new IllegalArgumentException("El precio de venta no puede ser menor que el costo de compra.");
@@ -172,7 +178,6 @@ public class VarianteServiceImpl implements VarianteService {
 
         VarianteResponseDTO fotoAnterior = varianteMapper.toDto(varianteAnterior);
 
-        // 1. Validación de unicidad de código de barras
         if (requestDTO.getCodigoBarras() != null && !requestDTO.getCodigoBarras().isBlank()) {
             if (varianteRepository.existsByCodigoBarrasAndIdNot(requestDTO.getCodigoBarras(), id)) {
                 throw new IllegalArgumentException("El código de barras ingresado ya está siendo usado por otro producto.");
@@ -181,27 +186,21 @@ public class VarianteServiceImpl implements VarianteService {
             requestDTO.setCodigoBarras(generarCodigoBarrasUnico());
         }
 
-        // 2. Mapeo de datos principales
         varianteMapper.updateEntityFromDto(requestDTO, varianteAnterior);
-        varianteAnterior.setCostoPromedio(requestDTO.getPrecioCompra()); // Actualización de costo en variante
+        varianteAnterior.setCostoPromedio(requestDTO.getPrecioCompra());
 
         Producto producto = productoRepository.findById(requestDTO.getProductoId())
                 .orElseThrow(() -> new EntityNotFoundException("Producto padre no encontrado con ID: " + requestDTO.getProductoId()));
         varianteAnterior.setProducto(producto);
 
-        // 3. BUENA PRÁCTICA: Sincronización limpia de colecciones (Orphan Removal Safe)
         if (requestDTO.getPresentaciones() != null) {
-
-            // Extraer IDs que vienen del Frontend
             Set<Integer> idsRequest = requestDTO.getPresentaciones().stream()
                     .filter(p -> p.getId() != null)
                     .map(VarianteRequestDTO.PresentacionReqDTO::getId)
                     .collect(Collectors.toSet());
 
-            // Eliminar empaques que el usuario borró en la vista
             varianteAnterior.getPresentaciones().removeIf(p -> p.getId() != null && !idsRequest.contains(p.getId()));
 
-            // Actualizar existentes o agregar nuevos
             for (VarianteRequestDTO.PresentacionReqDTO pReq : requestDTO.getPresentaciones()) {
                 if (pReq.getId() != null) {
                     varianteAnterior.getPresentaciones().stream()
@@ -228,10 +227,7 @@ public class VarianteServiceImpl implements VarianteService {
             varianteAnterior.getPresentaciones().clear();
         }
 
-        // 4. Guardado de variante
         Variante varianteActualizada = varianteRepository.save(varianteAnterior);
-
-        // 5. BUENA PRÁCTICA: Actualización del Stock Mínimo en su tabla correcta
         Integer tiendaId = (tiendaIdParam != null) ? tiendaIdParam : SecurityUtils.getTiendaId();
 
         InventarioTienda inventario = inventarioTiendaRepository
@@ -253,7 +249,6 @@ public class VarianteServiceImpl implements VarianteService {
         }
         inventarioTiendaRepository.save(inventario);
 
-        // 6. Preparar DTO de respuesta
         VarianteResponseDTO fotoNueva = varianteMapper.toDto(varianteActualizada);
         fotoNueva.setStockActual(inventario.getStockActual());
         fotoNueva.setStockMinimo(inventario.getStockMinimo());
@@ -297,7 +292,6 @@ public class VarianteServiceImpl implements VarianteService {
 
         VarianteResponseDTO fotoAnterior = varianteMapper.toDto(variante);
 
-        // Soft Delete / Toggle
         variante.setEstado(!variante.getEstado());
         Variante varianteActualizada = varianteRepository.save(variante);
         VarianteResponseDTO fotoNueva = varianteMapper.toDto(varianteActualizada);
@@ -311,6 +305,84 @@ public class VarianteServiceImpl implements VarianteService {
                 .build());
 
         return fotoNueva;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void exportarPdf(HttpServletResponse response, Integer tiendaId) {
+        try {
+            response.setContentType("application/pdf");
+            response.setHeader("Content-Disposition", "attachment; filename=variantes_catalogo.pdf");
+
+            Document document = new Document(PageSize.A4);
+            PdfWriter.getInstance(document, response.getOutputStream());
+
+            document.open();
+            Paragraph title = new Paragraph("REPORTE DE VARIANTES DE CATÁLOGO");
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(Chunk.NEWLINE);
+
+            PdfPTable table = new PdfPTable(6);
+            table.setWidthPercentage(100);
+            table.addCell("ID");
+            table.addCell("SKU");
+            table.addCell("Código Barras");
+            table.addCell("P. Compra");
+            table.addCell("P. Venta");
+            table.addCell("Stock");
+
+            List<VarianteResponseDTO> variantes = obtenerTodas(tiendaId);
+            for (VarianteResponseDTO v : variantes) {
+                table.addCell(String.valueOf(v.getId()));
+                table.addCell(v.getSku() != null ? v.getSku() : "");
+                table.addCell(v.getCodigoBarras() != null ? v.getCodigoBarras() : "");
+                table.addCell(String.valueOf(v.getPrecioCompra()));
+                table.addCell(String.valueOf(v.getPrecioVenta()));
+                table.addCell(String.valueOf(v.getStockActual()));
+            }
+
+            document.add(table);
+            document.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al generar el archivo PDF de variantes", e);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void exportarExcel(HttpServletResponse response, Integer tiendaId) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=variantes_catalogo.xlsx");
+
+            Sheet sheet = workbook.createSheet("Catálogo Variantes");
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("ID");
+            headerRow.createCell(1).setCellValue("SKU");
+            headerRow.createCell(2).setCellValue("Código Barras");
+            headerRow.createCell(3).setCellValue("Precio Compra");
+            headerRow.createCell(4).setCellValue("Precio Venta");
+            headerRow.createCell(5).setCellValue("Stock Actual");
+            headerRow.createCell(6).setCellValue("Stock Mínimo");
+
+            List<VarianteResponseDTO> variantes = obtenerTodas(tiendaId);
+            int rowIdx = 1;
+            for (VarianteResponseDTO v : variantes) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(v.getId());
+                row.createCell(1).setCellValue(v.getSku() != null ? v.getSku() : "");
+                row.createCell(2).setCellValue(v.getCodigoBarras() != null ? v.getCodigoBarras() : "");
+                row.createCell(3).setCellValue(v.getPrecioCompra() != null ? v.getPrecioCompra().doubleValue() : 0.0);
+                row.createCell(4).setCellValue(v.getPrecioVenta() != null ? v.getPrecioVenta().doubleValue() : 0.0);
+                row.createCell(5).setCellValue(v.getStockActual());
+                row.createCell(6).setCellValue(v.getStockMinimo());
+            }
+
+            workbook.write(response.getOutputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Error al generar el archivo Excel de variantes", e);
+        }
     }
 
     private String generarSku(Producto producto) {

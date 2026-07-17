@@ -3,6 +3,7 @@ package com.vantix.pos.modules.catalog.variant.controller;
 import com.vantix.pos.modules.catalog.variant.dto.VarianteRequestDTO;
 import com.vantix.pos.modules.catalog.variant.dto.VarianteResponseDTO;
 import com.vantix.pos.modules.catalog.variant.service.VarianteService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -63,5 +64,15 @@ public class VarianteController {
     @PatchMapping("/{id}/estado")
     public ResponseEntity<VarianteResponseDTO> cambiarEstado(@PathVariable Integer id) {
         return ResponseEntity.ok(varianteService.cambiarEstado(id));
+    }
+
+    @GetMapping("/exportar/pdf")
+    public void exportarPdf(HttpServletResponse response, @RequestParam(defaultValue = "1") Integer tiendaId) {
+        varianteService.exportarPdf(response, tiendaId);
+    }
+
+    @GetMapping("/exportar/excel")
+    public void exportarExcel(HttpServletResponse response, @RequestParam(defaultValue = "1") Integer tiendaId) {
+        varianteService.exportarExcel(response, tiendaId);
     }
 }
