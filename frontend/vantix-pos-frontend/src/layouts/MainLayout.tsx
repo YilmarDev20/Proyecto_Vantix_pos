@@ -4,7 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/core/auth/context/AuthContext';
 import { useStore } from '@/core/store/context/StoreContext';
 
-// Importamos los dos nuevos subcomponentes desacoplados
+// Importamos los dos subcomponentes desacoplados
 import { MainSidebar } from './components/MainSidebar';
 import { MainTopbar } from './components/MainTopbar';
 
@@ -26,7 +26,7 @@ export const MainLayout = () => {
         />
       )}
 
-      {/* COMPONENTE MENÚ LATERAL (DESACOPLADO) */}
+      {/* COMPONENTE MENÚ LATERAL (DESACOPLADO Y COLAPSABLE) */}
       <MainSidebar 
         user={user}
         logout={logout}
@@ -34,8 +34,8 @@ export const MainLayout = () => {
         onClose={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* SECCIÓN DEL CONTENIDO PRINCIPAL */}
-      <main className="flex-1 flex flex-col h-screen w-full overflow-hidden relative">
+      {/* SECCIÓN DEL CONTENIDO PRINCIPAL (Con margen compensatorio de 80px en desktop para el menú colapsado) */}
+      <main className="flex-1 flex flex-col h-screen w-full overflow-hidden relative lg:pl-20 transition-all duration-300">
         
         {/* COMPONENTE BARRA SUPERIOR (DESACOPLADO CON RELOJ Y MODO OSCURO) */}
         <MainTopbar 

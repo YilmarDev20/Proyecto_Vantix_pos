@@ -11,7 +11,8 @@ import org.mapstruct.MappingTarget;
 public interface VarianteMapper {
     @Mapping(target = "productoId", source = "producto.id")
     @Mapping(target = "productoNombre", source = "producto.nombre")
-    @Mapping(target = "marcaNombre", source = "producto.marca") // <-- Extrae la marca
+    @Mapping(target = "marcaNombre", source = "producto.marca")
+    @Mapping(target = "codigoBarras", source = "codigoBarras") // 🔥 Forzamos el mapeo explícito hacia el DTO
     VarianteResponseDTO toDto(Variante variante);
 
     @Mapping(target = "id", ignore = true)
@@ -19,6 +20,7 @@ public interface VarianteMapper {
     @Mapping(target = "costoPromedio", ignore = true)
     @Mapping(target = "producto", ignore = true)
     @Mapping(target = "presentaciones", ignore = true)
+    @Mapping(target = "codigoBarras", source = "codigoBarras") // 🔥 Forzamos el mapeo explícito al crear la entidad
     Variante toEntity(VarianteRequestDTO requestDTO);
 
     @Mapping(target = "id", ignore = true)
@@ -26,5 +28,6 @@ public interface VarianteMapper {
     @Mapping(target = "costoPromedio", ignore = true)
     @Mapping(target = "producto", ignore = true)
     @Mapping(target = "presentaciones", ignore = true)
+    @Mapping(target = "codigoBarras", source = "codigoBarras") // 🔥 Forzamos el mapeo explícito al actualizar la entidad
     void updateEntityFromDto(VarianteRequestDTO requestDTO, @MappingTarget Variante variante);
 }

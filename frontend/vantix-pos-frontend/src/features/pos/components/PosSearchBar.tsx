@@ -76,24 +76,41 @@ export const PosSearchBar = ({ variantes, productos, onAddProduct, onOpenPresent
       const term = searchTerm.trim();
       if (!term) return;
 
-      let matchedVariant = variantes.find(v => v.codigoBarras === term || v.sku === term);
+      let matchedVariant: Variant | undefined = undefined;
       let matchedPresentation: Presentacion | undefined = undefined;
 
-      if (!matchedVariant) {
-        for (const v of variantes) {
-          const pres = v.presentaciones?.find(p => p.codigoBarras === term);
-          if (pres) {
-            matchedVariant = v;
-            matchedPresentation = pres;
-            break;
-          }
+      // 🔍 1. Jerarquía de búsqueda inteligente por códigos de barra exactos:
+      
+      // Paso A: ¿Coincide con algún empaque / presentación secundaria de alguna variante?
+      for (const v of variantes) {
+        const pres = v.presentaciones?.find(p => p.codigoBarras === term);
+        if (pres) {
+          matchedVariant = v;
+          matchedPresentation = pres;
+          break;
         }
       }
 
+      // Paso B: Si no fue un empaque, ¿coincide directamente con el código de barras exclusivo de la variante base?
+      if (!matchedVariant) {
+        matchedVariant = variantes.find(v => v.codigoBarras === term);
+      }
+
+      // Paso C: Si aún no coincide por código de barras, buscar por SKU exacto
+      if (!matchedVariant) {
+        matchedVariant = variantes.find(v => v.sku === term);
+      }
+
+      // 🛒 2. Despacho inteligente inmediato sin modales redundantes
       if (matchedVariant) {
         if (matchedPresentation) {
+          // Si escaneó el código de la Caja, agregar la Caja directamente
           handleAddDirect(matchedVariant, matchedPresentation);
+        } else if (matchedVariant.codigoBarras === term) {
+          // Si escaneó el código exacto de la Unidad Base, agregar la Unidad directamente (OMITIENDO EL MODAL)
+          handleAddDirect(matchedVariant);
         } else {
+          // Si entró aquí por SKU u otro texto, y tiene empaques, abrir el modal de selección
           if (matchedVariant.presentaciones && matchedVariant.presentaciones.length > 0) {
             onOpenPresentationModal(matchedVariant); 
             setSearchTerm('');
@@ -104,7 +121,10 @@ export const PosSearchBar = ({ variantes, productos, onAddProduct, onOpenPresent
         }
       } else if (variantesFiltradas.length === 1) {
         const v = variantesFiltradas[0];
-        if (v.presentaciones && v.presentaciones.length > 0) {
+        // Si el término escrito coincide con el código de barras exacto de la base, agregamos sin modal
+        if (v.codigoBarras === term) {
+          handleAddDirect(v);
+        } else if (v.presentaciones && v.presentaciones.length > 0) {
           onOpenPresentationModal(v);
           setSearchTerm('');
         } else {
@@ -136,7 +156,6 @@ export const PosSearchBar = ({ variantes, productos, onAddProduct, onOpenPresent
     <div className="relative p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-20 shrink-0 transition-colors">
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
-        {/* ✅ ADAPTACIÓN: Input optimizado para contrastes en fondos oscuros */}
         <input
           ref={inputRef}
           type="text"
@@ -153,7 +172,6 @@ export const PosSearchBar = ({ variantes, productos, onAddProduct, onOpenPresent
         )}
       </div>
 
-      {/* ✅ ADAPTACIÓN: Flotante de autocompletado en modo noche con profundidad elevada */}
       {searchTerm && variantesFiltradas.length > 0 && (
         <div className="absolute top-full left-4 right-4 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-50">
           {variantesFiltradas.map((v) => (

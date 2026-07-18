@@ -1,71 +1,203 @@
+import { forwardRef } from 'react';
 import Barcode from 'react-barcode';
 
-export const PrintLabelEngine = ({ cola, formato, razonSocial }: any) => (
-  <div id="print-section" className="hidden print:block bg-white w-full">
-    <style>{`
-      @media print {
-        html, body, #root, main, .overflow-y-auto, .overflow-hidden, .h-screen, .h-full, .flex-1 {
-          height: auto !important;
-          min-height: auto !important;
-          overflow: visible !important;
-          position: static !important;
-        }
-        body * { visibility: hidden; }
-        #print-section, #print-section * { visibility: visible; }
-        #print-section { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-        
-        /* LÓGICA DE FORMATOS */
-        ${formato === 'TERMICA' ? `
-          @page { size: 50mm 25mm; margin: 0; }
-          .print-label { width: 50mm; height: 25mm; padding: 2mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; page-break-after: always; font-family: sans-serif; overflow: hidden; margin: 0 auto; }
-          .lbl-title { font-size: 7pt; font-weight: 800; text-align: center; line-height: 1.1; margin-bottom: 1mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100%; }
-        ` : formato === 'A4_NORMAL' ? `
-          @page { size: A4 portrait; margin: 10mm; }
-          .print-grid { display: flex; flex-wrap: wrap; gap: 3mm; justify-content: flex-start; align-content: flex-start; width: 100%; }
-          .print-label { width: 60mm; height: 35mm; border: 1px dashed #ccc; border-radius: 2mm; padding: 2.5mm; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-sizing: border-box; font-family: sans-serif; overflow: hidden; page-break-inside: avoid; margin-bottom: 2mm; }
-          .lbl-title { font-size: 7pt; font-weight: 800; text-align: center; line-height: 1.1; margin-bottom: 1mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100%; }
-        ` : ` /* A4_MINI */
-          @page { size: A4 portrait; margin: 10mm; }
-          .print-grid { display: flex; flex-wrap: wrap; gap: 2mm; justify-content: flex-start; align-content: flex-start; width: 100%; }
-          .print-label { width: 45mm; height: 25mm; border: 1px dashed #ccc; border-radius: 2mm; padding: 1.5mm; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-sizing: border-box; font-family: sans-serif; overflow: hidden; page-break-inside: avoid; margin-bottom: 2mm; }
-          .lbl-title { font-size: 5.5pt; font-weight: 800; text-align: center; line-height: 1.1; margin-bottom: 0.5mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100%; }
-        `}
-        
-        .lbl-store { font-size: 5pt; font-weight: 800; color: #555; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lbl-sku { font-size: 6pt; color: #000; font-weight: 600; font-family: monospace; }
-        .lbl-price { font-size: 13pt; font-weight: 900; color: #000; line-height: 1; }
-        .lbl-footer { width: 100%; display: flex; justify-content: space-between; align-items: flex-end; margin-top: 1mm; }
-        .lbl-store-info { display: flex; flex-direction: column; justify-content: flex-end; max-width: 60%; }
-      }
-    `}</style>
+export const PrintLabelEngine = forwardRef(({ cola, formato, razonSocial }: any, ref: any) => {
+  const is30x20 = formato === 'TERMICA_30X20';
+  const is50x25 = formato === 'TERMICA_50X25';
 
-    <div className={formato.includes('A4') ? 'print-grid' : ''}>
-      {cola.map((item: any) => (
-        Array.from({ length: item.cantidadImprimir }).map((_, i: number) => (
-          <div key={`${item.id}-${i}`} className="print-label">
-            <div className="lbl-title">{item.productoNombre}</div>
+  // Helper Inteligente: Ensambla el Nombre + [Marca] - Atributos/Variación dinámicamente
+  const construirNombreCompleto = (item: any) => {
+    const nombre = item.productoNombre || '';
+    const marca = item.marcaNombre ? `[${item.marcaNombre}]` : '';
+    
+    let textoAtributos = '';
+    if (item.atributos && typeof item.atributos === 'object') {
+      textoAtributos = Object.values(item.atributos)
+        .filter(val => typeof val === 'string' || typeof val === 'number')
+        .join(' ');
+    }
+
+    return `${nombre} ${marca} ${textoAtributos ? `- ${textoAtributos}` : ''}`
+      .trim()
+      .replace(/\s+/g, ' ');
+  };
+
+  // Tamaño de fuente adaptativo para proteger el espacio vertical
+  const getSmartSize = (text: string, basePt: number) => {
+    if (!text) return `${basePt}pt`;
+    if (text.length > 25) return `${basePt * 0.75}pt`; 
+    if (text.length > 14) return `${basePt * 0.88}pt`;
+    return `${basePt}pt`;
+  };
+
+  // Detector de simbología comercial o interna según el JSON
+  const obtenerFormatoBarcode = (valor: string) => {
+    if (!valor) return 'CODE128';
+    const limpio = valor.trim();
+    if (/^\d{13}$/.test(limpio)) return 'EAN13';
+    if (/^\d{8}$/.test(limpio)) return 'EAN8';
+    return 'CODE128';
+  };
+
+  const nombreEmpresa = (razonSocial && razonSocial !== 'Cargando...') 
+    ? razonSocial 
+    : 'ZARELY MODA & ACCESORIOS';
+
+  // 🔥 ANCHO PERFECTO PRESERVADO: Mantenemos la calibración exacta que funcionó en tus pruebas
+  const barcodeWidth = is50x25 ? 2.0 : 1.4; 
+  // Altura calibrada proporcionalmente para dar espacio limpio a los textos y pies de página
+  const barcodeHeight = is50x25 ? 38 : 24; 
+
+  return (
+    <div ref={ref} className="print-container">
+      <style>{`
+        @media print {
+          @page {
+            size: ${is50x25 ? '50mm 25mm' : '30mm 20mm'};
+            margin: 0;
+          }
+          body { margin: 0; padding: 0; background: #fff; }
+          * { box-sizing: border-box; color: #000; font-family: sans-serif; }
+
+          /* CONTENEDOR DE LA ETIQUETA */
+          .ticket-wrapper {
+            width: ${is50x25 ? '50mm' : '30mm'};
+            height: ${is50x25 ? '25mm' : '20mm'};
+            /* Colchón de seguridad optimizado para el nuevo ancho de barras */
+            padding: ${is50x25 ? '1.5mm 3.5mm 1mm 3.5mm' : '0.8mm 1.5mm 0.5mm 1.5mm'};
+            page-break-after: always;
+            page-break-inside: avoid;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+          }
+          .ticket-wrapper:last-child { page-break-after: auto; }
+
+          /* CABECERA (DATOS DE PRODUCTO Y MARCA) */
+          .ticket-header { 
+            width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 0.1mm; 
+          }
+          
+          .ticket-store { 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            text-align: center; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            width: 100%; 
+            line-height: 1; 
+          }
+          
+          .ticket-title { 
+            font-weight: 700; 
+            text-align: center; 
+            width: 100%; 
+            line-height: 1.05;
+            white-space: normal !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: ${is30x20 ? '1' : '2'} !important; 
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+          }
+
+          /* ÁREA DEL CÓDIGO DE BARRAS PRESERVADA */
+          .ticket-barcode { 
+            width: 100%; 
+            flex: 1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden;
+            margin: 0.2mm 0; 
+          }
+          /* Mantenemos el estiramiento horizontal al 98% que abrió los espacios blancos */
+          .ticket-barcode svg { 
+            max-width: 98% !important; 
+            height: ${barcodeHeight}px !important; 
+            object-fit: fill; 
+          }
+
+          /* PIE DE PÁGINA (PREFIJO/SKU Y PRECIO) */
+          .ticket-footer { 
+            width: 100%; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end; 
+            line-height: 1;
+            padding: 0 0.5mm; 
+          }
+          
+          .ticket-sku { 
+            font-weight: 600; 
+            font-family: monospace; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            max-width: 52%; 
+          }
+          
+          .ticket-price { 
+            font-weight: 900; 
+            white-space: nowrap; 
+          }
+        }
+      `}</style>
+
+      {cola.map((item: any) => {
+        const productoNombreCompleto = construirNombreCompleto(item);
+        const valorCodigo = item.codigoBarras || item.sku || '';
+        const tipoFormato = obtenerFormatoBarcode(valorCodigo);
+
+        return Array.from({ length: item.cantidadImprimir }).map((_, i: number) => (
+          <div key={`${item.id}-${i}`} className="ticket-wrapper">
             
-            <div style={{ transform: 'scale(0.9)', transformOrigin: 'center' }}>
+            {/* TEXTOS SUPERIORES */}
+            <div className="ticket-header">
+              {!is30x20 && (
+                <div className="ticket-store" style={{ fontSize: getSmartSize(nombreEmpresa, 5.5) }}>
+                  {nombreEmpresa}
+                </div>
+              )}
+              <div className="ticket-title" style={{ fontSize: getSmartSize(productoNombreCompleto, is50x25 ? 7.5 : 5.2) }}>
+                {productoNombreCompleto}
+              </div>
+            </div>
+
+            {/* CÓDIGO DE BARRAS CON ANCHO CORREGIDO */}
+            <div className="ticket-barcode">
               <Barcode 
-                value={item.codigoBarras || item.sku} 
-                width={1.2} 
-                height={formato === 'TERMICA' ? 24 : formato === 'A4_MINI' ? 18 : 26} 
-                fontSize={8} 
+                value={valorCodigo} 
+                format={tipoFormato}
+                width={barcodeWidth} 
+                height={barcodeHeight} 
                 margin={0}
-                displayValue={false}
+                displayValue={false} 
               />
             </div>
 
-            <div className="lbl-footer">
-              <div className="lbl-store-info">
-                <span className="lbl-store">{razonSocial}</span>
-                <span className="lbl-sku">{item.sku}</span>
+            {/* TEXTOS INFERIORES */}
+            <div className="ticket-footer">
+              <span className="ticket-sku" style={{ fontSize: is50x25 ? '6.5pt' : '4.8pt' }}>
+                {item.sku}
+              </span>
+              <div className="ticket-price" style={{ fontSize: is50x25 ? '13pt' : '9.5pt' }}>
+                S/ {item.precioVenta.toFixed(2)}
               </div>
-              <span className="lbl-price">S/ {item.precioVenta.toFixed(2)}</span>
             </div>
+
           </div>
-        ))
-      ))}
+        ));
+      })}
     </div>
-  </div>
-);
+  );
+});
+
+PrintLabelEngine.displayName = "PrintLabelEngine";
