@@ -17,7 +17,6 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Clave secreta de 256 bits (Nunca la compartas en producción)
     @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String secretKey;
 
@@ -35,11 +34,15 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        // 🚀 CIRUGÍA LOGÍSTICA PREMIUM: Extendemos el tiempo de expiración a 365 días para la estabilidad de la caja
+        // Cálculo matemático exacto: 1000ms * 60s * 60m * 24h * 365 días
+        long unAnioEnMilisegundos = 1000L * 60 * 60 * 24 * 365;
+
         return Jwts.builder()
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // Expira en 24 horas
+                .expiration(new Date(System.currentTimeMillis() + unAnioEnMilisegundos))
                 .signWith(getSignInKey(), Jwts.SIG.HS256)
                 .compact();
     }

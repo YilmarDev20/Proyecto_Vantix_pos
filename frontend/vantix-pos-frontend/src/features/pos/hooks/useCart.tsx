@@ -49,7 +49,6 @@ export const useCart = (productos: Product[] = []) => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(dataToSave));
   }, [items, cliente, descuentoGlobal, cotizacionActiva]);
 
-  // Despertador Automático para cuando cargan los productos
   useEffect(() => {
     if (productos.length > 0 && items.length > 0) {
       setItems((prev) => recalcularPacksSurtidos(prev));
@@ -125,6 +124,7 @@ export const useCart = (productos: Product[] = []) => {
                     item.packAplicado = nombrePackPrincipal;
                     aplicados += item.cantidad;
                 } else {
+                   // 🚀 CORREGIDO: Eliminamos el texto corrupto y asignamos el cálculo numérico directo
                    const unidadesConDescuento = cantidadEnPromocion - aplicados;
                    const unidadesSueltas = item.cantidad - unidadesConDescuento;
                    
@@ -228,6 +228,42 @@ export const useCart = (productos: Product[] = []) => {
     });
   };
 
+  const changePresentation = (varianteId: number, oldPresentacionId: number | undefined, newFactor: number) => {
+    setItems((prev) => {
+      const index = prev.findIndex(i => i.variante.id === varianteId && i.presentacion?.id === oldPresentacionId);
+      if (index === -1) return prev;
+
+      const currentItem = prev[index];
+      
+      let nuevaPresentacion: Presentacion | undefined = undefined;
+      if (currentItem.variante.presentaciones && newFactor > 1) {
+        nuevaPresentacion = currentItem.variante.presentaciones.find(p => p.factorConversion === newFactor);
+      }
+
+      if ((currentItem.cantidad * newFactor) > currentItem.variante.stockActual) {
+        toast.warning("La cantidad actual supera el stock físico disponible en este nuevo empaque. Reajustando a 1.");
+        currentItem.cantidad = 1;
+      }
+
+      const precioAUsar = nuevaPresentacion ? nuevaPresentacion.precioVenta : currentItem.variante.precioVenta;
+
+      const updatedItem: CartItem = {
+        ...currentItem,
+        presentacion: nuevaPresentacion,
+        precioUnitario: precioAUsar,
+        descuentoUnitario: 0,
+        subtotal: precioAUsar * currentItem.cantidad,
+        packAplicado: undefined,
+        packBaseName: undefined
+      };
+
+      const newItems = [...prev];
+      newItems[index] = updatedItem;
+
+      return recalcularPacksSurtidos(newItems);
+    });
+  };
+
   const removeItem = (varianteId: number, presentacionId?: number) => {
     setItems((prev) => {
       const newItems = prev.filter((i) => !(i.variante.id === varianteId && i.presentacion?.id === presentacionId));
@@ -265,7 +301,6 @@ export const useCart = (productos: Product[] = []) => {
         codigoBarras: null 
       } : undefined;
 
-      // ---> SOLUCIÓN: Buscamos el producto padre en el catálogo cargado <---
       const prod = productos.find(p => p.id === item.productoId);
 
       return {
@@ -276,9 +311,9 @@ export const useCart = (productos: Product[] = []) => {
           sku: item.sku, 
           stockActual: item.stockActual,
           precioVenta: pres ? 0 : item.precioCotizado,
-          // ---> INYECTAMOS EL NOMBRE Y LA MARCA PARA LA TICKETERA <---
           productoNombre: prod ? prod.nombre : (item.productoNombre || 'Producto Desconocido'),
-          marcaNombre: prod ? prod.marca : (item.marcaNombre || null)
+          marcaNombre: prod ? prod.marca : (item.marcaNombre || null),
+          presentaciones: []
         },
         presentacion: pres,
         cantidad: item.cantidadSolicitada,
@@ -308,6 +343,6 @@ export const useCart = (productos: Product[] = []) => {
     observaciones, setObservaciones, subtotal, totalFinal, totalPagado, vuelto, faltaPagar,
     cotizacionActiva, setCotizacionActiva, 
     hasStockErrors,
-    addItem, updateQuantity, removeItem, addPago, removePago, clearCart, loadQuote, 
+    addItem, updateQuantity, removeItem, changePresentation, addPago, removePago, clearCart, loadQuote, 
   };
 };

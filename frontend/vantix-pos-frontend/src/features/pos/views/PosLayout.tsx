@@ -180,7 +180,6 @@ export const PosLayout = () => {
     );
   }
 
-  // PLACEHOLDER: Visión Global Activa adaptada a modo noche
   if (activeStoreId === null) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 p-6 text-center animate-in fade-in zoom-in-95 duration-500 transition-colors">
@@ -197,7 +196,6 @@ export const PosLayout = () => {
     );
   }
 
-  // PLACEHOLDER: Caja Cerrada adaptada a modo noche
   if (!turnoActivo) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 p-6 text-center animate-in fade-in duration-500 transition-colors">
@@ -222,14 +220,12 @@ export const PosLayout = () => {
         {/* ================================================== */}
         <div className={`w-full flex-col bg-white dark:bg-slate-900 lg:rounded-2xl shadow-sm border-0 lg:border border-slate-200 dark:border-slate-800 overflow-hidden ${activeMobileTab === 'CART' ? 'hidden lg:flex' : 'flex h-full'} ${posMode === 'CATALOG' ? 'lg:w-[50%] xl:w-[55%]' : 'lg:w-[65%] xl:w-[70%]'}`}>
           
-          {/* Barra de cabecera interna */}
           <div className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex justify-between items-center z-20 shadow-sm shrink-0 transition-colors">
              <div className="flex items-center space-x-2">
                 <Store className="w-5 h-5 text-primary dark:text-blue-400" />
                 <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 hidden sm:block">Punto de Venta</h2>
              </div>
 
-             {/* Toggles de Modo */}
              <div className="flex bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl shadow-inner transition-colors">
                 <button 
                   type="button"
@@ -265,11 +261,13 @@ export const PosLayout = () => {
                  onOpenPresentationModal={handleOpenPresentationModal} 
                />
                <div className="flex-1 overflow-y-auto">
+                  {/* 🚀 ENLAZADO: Agregada prop onChangePresentation en modo Escáner */}
                   <CartItemList 
                     items={cart.items} 
                     productos={productos}
                     onUpdateQuantity={cart.updateQuantity}
                     onRemoveItem={cart.removeItem}
+                    onChangePresentation={cart.changePresentation}
                     onClearCart={cart.clearCart} 
                   />
                </div>
@@ -295,11 +293,13 @@ export const PosLayout = () => {
           
           {posMode === 'CATALOG' && (
              <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950/30 min-h-[200px] transition-colors">
+                {/* 🚀 ENLAZADO: Agregada prop onChangePresentation en el panel derecho del modo Catálogo */}
                 <CartItemList 
                     items={cart.items} 
                     productos={productos}
                     onUpdateQuantity={cart.updateQuantity}
                     onRemoveItem={cart.removeItem}
+                    onChangePresentation={cart.changePresentation}
                     onClearCart={cart.clearCart} 
                  />
              </div>
@@ -323,9 +323,7 @@ export const PosLayout = () => {
 
       </div>
 
-      {/* ================================================== */}
-      {/* NAVEGACIÓN MÓVIL (Barra Inferior) */}
-      {/* ================================================== */}
+      {/* NAVEGACIÓN MÓVIL */}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex lg:hidden z-40 transition-colors">
         <button 
           type="button"

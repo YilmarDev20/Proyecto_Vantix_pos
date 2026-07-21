@@ -5,9 +5,12 @@ export interface DetalleTrasladoResponse {
   varianteId: number;
   sku: string;
   nombreProducto: string; 
-  marcaProducto?: string; // <-- Nuevo
+  marcaProducto?: string;
   atributos: Record<string, any> | null; 
   cantidad: number;
+  // 🚀 Persistidos de forma definitiva desde tu backend
+  presentacionNombre?: string;
+  factorConversion?: number;
 }
 
 export interface TrasladoResponse {
@@ -27,6 +30,9 @@ export interface TrasladoResponse {
 export interface DetalleTrasladoRequest {
   varianteId: number;
   cantidad: number;
+  // 🚀 Nuevos campos obligatorios en la petición estructurada
+  presentacionNombre: string;
+  factorConversion: number;
 }
 
 export interface TrasladoRequest {

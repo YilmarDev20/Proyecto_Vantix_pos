@@ -5,10 +5,10 @@ import { useStore } from '@/core/store/context/StoreContext';
 import { useAuth } from '@/core/auth/context/AuthContext';
 import { TransfersService } from '../services/transfers.api';
 import { VariantService } from '@/features/inventory/variant/services/variant.api';
-import type { Variant } from '@/features/inventory/variant/types/variant.types';
+import type { Variant, Presentacion } from '@/features/inventory/variant/types/variant.types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
-import { TransferProductSearch } from '../components/TransferProductSearch';
+import { AdvancedProductSearch } from '@/components/ui/AdvancedProductSearch';
 import { TransferCart } from '../components/TransferCart';
 
 interface CartItem {
@@ -17,6 +17,7 @@ interface CartItem {
   nombreVisible: string; 
   stockDisponible: number;
   cantidadTraslado: number;
+  presentacionesDisponibles: Presentacion[];
 }
 
 export const NewTransferView = () => {
@@ -27,10 +28,10 @@ export const NewTransferView = () => {
   const [notas, setNotas] = useState('');
   
   const [variantes, setVariantes] = useState<Variant[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [detallesFinales, setDetallesFinales] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -76,7 +77,6 @@ export const NewTransferView = () => {
         return;
       }
       setCart(cart.map(item => item.varianteId === variante.id ? { ...item, cantidadTraslado: item.cantidadTraslado + 1 } : item));
-      // ✅ FEEDBACK: Avisa que se sumó una unidad al mismo item
       toast.success(`Se aumentó la cantidad de "${nombreFormateado}" en el traslado`);
     } else {
       setCart([...cart, {
@@ -84,9 +84,9 @@ export const NewTransferView = () => {
         sku: variante.sku,
         nombreVisible: nombreFormateado, 
         stockDisponible: variante.stockActual,
-        cantidadTraslado: 1
+        cantidadTraslado: 1,
+        presentacionesDisponibles: variante.presentaciones || []
       }]);
-      // ✅ FEEDBACK: Avisa que el producto es nuevo en la lista
       toast.success(`"${nombreFormateado}" agregado al detalle del traslado`);
     }
   };
@@ -102,7 +102,11 @@ export const NewTransferView = () => {
 
   const removeFromCart = (varianteId: number) => setCart(cart.filter(item => item.varianteId !== varianteId));
 
-  const handlePreSubmit = () => setIsConfirmOpen(true);
+  // 🚀 Captura los detalles del carrito con sus respectivos empaques antes de abrir la confirmación
+  const handleTriggerConfirm = (detallesMapeados: any[]) => {
+    setDetallesFinales(detallesMapeados);
+    setIsConfirmOpen(true);
+  };
 
   const handleSendTransfer = async () => {
     setIsConfirmOpen(false); 
@@ -115,11 +119,12 @@ export const NewTransferView = () => {
         tiendaDestinoId: Number(destinoId),
         usuarioCreadorId: creadorId,
         notas: notas,
-        detalles: cart.map(item => ({ varianteId: item.varianteId, cantidad: item.cantidadTraslado }))
+        // 🚀 Envía los detalles congelados con presentacionNombre y factorConversion
+        detalles: detallesFinales
       });
 
       toast.success('¡Traslado enviado con éxito!');
-      setCart([]); setNotas(''); setDestinoId('');
+      setCart([]); setNotas(''); setDestinoId(''); setDetallesFinales([]);
       
       const data = await VariantService.getAll(activeStoreId as number); 
       setVariantes(data);
@@ -131,29 +136,53 @@ export const NewTransferView = () => {
     }
   };
 
-  const filteredCatalog = variantes.filter(v => {
-    const terminoBusqueda = searchTerm.toLowerCase();
-    const nombreCompleto = formatearNombreVariante(v).toLowerCase();
-    return v.sku.toLowerCase().includes(terminoBusqueda) || nombreCompleto.includes(terminoBusqueda);
-  }).slice(0, 15); 
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
-      <TransferProductSearch 
-        activeStoreName={activeStoreName} searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-        isLoadingCatalog={isLoadingCatalog} filteredCatalog={filteredCatalog} addToCart={addToCart}
-        formatearNombreVariante={formatearNombreVariante}
-      />
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0 items-start">
       
-      <TransferCart 
-        cart={cart} updateQuantity={updateQuantity} removeFromCart={removeFromCart}
-        destinoId={destinoId} setDestinoId={setDestinoId} stores={stores}
-        activeStoreId={activeStoreId} notas={notas} setNotas={setNotas}
-        handlePreSubmit={handlePreSubmit} isSubmitting={isSubmitting}
-      />
+      <div className="lg:col-span-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col relative z-20 transition-colors">
+        <div className="mb-4">
+          <h2 className="text-base font-black text-slate-800 dark:text-slate-100 flex flex-wrap items-center gap-1.5 leading-tight">
+            Origen: <span className="text-primary dark:text-blue-400 font-extrabold">{activeStoreName}</span>
+          </h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            Busca y agrega variantes para transferir a otra sucursal.
+          </p>
+        </div>
+
+        {isLoadingCatalog ? (
+          <div className="py-6 text-center text-sm text-slate-400 font-medium animate-pulse">
+            Cargando catálogo...
+          </div>
+        ) : (
+          <AdvancedProductSearch 
+            items={variantes}
+            onSelectItem={addToCart}
+            customFormatName={formatearNombreVariante}
+            placeholder="Tipea producto, SKU o barras..."
+          />
+        )}
+      </div>
+      
+      <div className="lg:col-span-8">
+        <TransferCart 
+          cart={cart} 
+          updateQuantity={updateQuantity} 
+          removeFromCart={removeFromCart}
+          destinoId={destinoId} 
+          setDestinoId={setDestinoId} 
+          stores={stores}
+          activeStoreId={activeStoreId} 
+          notas={notas} 
+          setNotas={setNotas}
+          onSubmitTransfer={handleTriggerConfirm} 
+          isSubmitting={isSubmitting}
+        />
+      </div>
 
       <ConfirmDialog 
-        isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} onConfirm={handleSendTransfer}
+        isOpen={isConfirmOpen} 
+        onClose={() => setIsConfirmOpen(false)} 
+        onConfirm={handleSendTransfer}
         title="Confirmar Traslado"
         message={`¿Estás seguro de que deseas enviar estos ${cart.length} productos a la sucursal destino? El stock se descontará inmediatamente.`}
         confirmText="Sí, Enviar Traslado"

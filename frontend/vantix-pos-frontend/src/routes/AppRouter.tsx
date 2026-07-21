@@ -1,119 +1,128 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { Tag, Sparkles } from 'lucide-react'; // Importamos iconos para el Placeholder
 import { useAuth } from '@/core/auth/context/AuthContext'; 
+import { useStore } from '@/core/store/context/StoreContext';
+import { Store } from 'lucide-react';
 
 import { MainLayout } from '@/layouts/MainLayout';
 import { LoginView } from '@/features/auth/views/LoginView'; 
 
 import { CustomersView } from '@/features/customers/views/CustomersView';
 import { CustomerProfileView } from '@/features/customers/views/CustomerProfileView';
-import { SettingsView } from '@/features/settings/views/SettingsView';
-import { InventoryLayout } from '@/features/inventory/views/InventoryLayout';
-import { ProductFormView } from '@/features/inventory/product/views/ProductFormView';
-import { VariantManagerView } from '@/features/inventory/variant/views/VariantManagerView';
-import { FinancesLayout } from '@/features/finances/views/FinancesLayout';
-import { PurchasesLayout } from '@/features/purchases/views/PurchasesLayout';
+
+// Módulo Inventario
+import { ProductView } from '@/features/inventory/product/views/ProductView';
+import { LabelPrintingView } from '@/features/inventory/labels/views/LabelPrintingView';
+import { CategoryView } from '@/features/inventory/category/views/CategoryView';
+import { KardexView } from '@/features/inventory/kardex/views/KardexView'; 
+import { TransfersLayout } from '@/features/inventory/transfers/views/TransfersLayout';
+
+// Módulo Finanzas
+import { CashRegisterView } from '@/features/finances/views/CashRegisterView';
+import { TurnHistoryView } from '@/features/finances/views/TurnHistoryView';
+import { CashFlowView } from '@/features/finances/views/CashFlowView';
+
+// Módulo Compras
+import { SuppliersView } from '@/features/purchases/views/SuppliersView';
+import { PurchaseHistoryView } from '@/features/purchases/views/PurchaseHistoryView';
+import { AccountsPayableView } from '@/features/purchases/views/AccountsPayableView';
+
+// Módulo Historial
 import { TransactionHistoryView } from '@/features/history/views/TransactionHistoryView';
-import { PosLayout } from '@/features/pos/views/PosLayout';
-import { AuditView } from '@/features/audit/views/AuditView';
+
+// 🚀 Módulo Reportes y Configuración distribuidos nativamente
+import { ReportsLayout } from '@/features/reports/views/ReportsLayout';
+import { ReporteVentasView } from '@/features/reports/views/ReporteVentasView';
 import { ReporteInventarioView } from '@/features/reports/views/ReporteInventarioView';
 import { ReporteFinanzasView } from '@/features/reports/views/ReporteFinanzasView';
-import { ReporteVentasView } from '@/features/reports/views/ReporteVentasView';
 import { ReporteComprasView } from '@/features/reports/views/ReporteComprasView';
+
+import { SettingsView } from '@/features/settings/views/SettingsView';
+
+import { ProductFormView } from '@/features/inventory/product/views/ProductFormView';
+import { VariantManagerView } from '@/features/inventory/variant/views/VariantManagerView';
+import { PosLayout } from '@/features/pos/views/PosLayout';
+import { AuditView } from '@/features/audit/views/AuditView';
 import { DashboardView } from '@/features/dashboard/views/DashboardView'; 
-import { ReportsLayout } from '@/features/reports/views/ReportsLayout';
 
-// ==========================================
-// PLACEHOLDER: PROMOCIONES (MUY PRONTO)
-// ==========================================
-const PromotionsPlaceholder = () => (
-  <div className="flex flex-col items-center justify-center h-full p-8 animate-in fade-in zoom-in-95 duration-500">
-    <div className="bg-white p-10 rounded-3xl shadow-xl border border-slate-200 text-center max-w-lg relative overflow-hidden">
-      
-      {/* Fondo decorativo */}
-      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-purple-500 to-indigo-600 opacity-10"></div>
-      
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="w-24 h-24 bg-gradient-to-tr from-purple-100 to-indigo-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-purple-100">
-          <Tag className="w-12 h-12 text-purple-500" />
+const GlobalModeGuard = () => {
+  const { activeStoreId } = useStore();
+  if (!activeStoreId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[450px] text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 transition-colors p-6">
+        <div className="w-20 h-20 bg-blue-50 dark:bg-blue-950/40 rounded-full flex items-center justify-center mb-5 border border-blue-100 dark:border-blue-900/50">
+          <Store className="w-10 h-10 text-primary dark:text-blue-400" />
         </div>
-        
-        <h2 className="text-3xl font-black text-slate-800 mb-3 flex items-center justify-center">
-          Módulo de Promociones <Sparkles className="w-6 h-6 ml-2 text-amber-400" />
-        </h2>
-        
-        <p className="text-slate-500 mb-8 text-lg">
-          Estamos preparando un potente motor de descuentos, 2x1 y cupones especiales para impulsar tus ventas.
+        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-3">Visión Global Activa</h2>
+        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto text-sm">
+          Por seguridad, no es posible gestionar esta sección en el modo global. Selecciona una tienda específica.
         </p>
-        
-        <div className="inline-flex items-center px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-full text-sm uppercase tracking-widest border border-slate-200">
-          ¡Disponible Muy Pronto!
-        </div>
       </div>
-    </div>
-  </div>
-);
-
-// ==========================================
-// EL NUEVO GUARDIÁN DE RUTAS POR ROLES
-// ==========================================
-const RoleProtectedRoute = ({ allowedRoles }: { allowedRoles: string[] }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center text-primary font-bold">Verificando sesión...</div>;
+    );
   }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Si el usuario está logueado pero su rol NO está en la lista de permitidos
-  if (user && !allowedRoles.includes(user.rol)) {
-    // Lo pateamos a una ruta segura (Punto de Venta)
-    return <Navigate to="/pos" replace />;
-  }
-
   return <Outlet />;
 };
 
-// ==========================================
-// ENRUTADOR PRINCIPAL
-// ==========================================
+const RoleProtectedRoute = ({ allowedRoles }: { allowedRoles: string[] }) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-bold">Verificando sesión...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user && !allowedRoles.includes(user.rol)) return <Navigate to="/pos" replace />;
+  return <Outlet />;
+};
+
 export const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* RUTA PÚBLICA */}
         <Route path="/login" element={<LoginView />} />
 
-        {/* LAYOUT PRINCIPAL (Requiere estar logueado, sin importar el rol) */}
         <Route element={<RoleProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SELLER']} />}>
           <Route element={<MainLayout />}>
             
-            {/* ----------------------------------------------------
-                ZONA COMPARTIDA (Admin y Cajero pueden entrar)
-                ---------------------------------------------------- */}
             <Route path="/pos" element={<PosLayout />} />
-            <Route path="/inventory" element={<InventoryLayout />} />   
+            
+            {/* INVENTARIO */}
+            <Route element={<GlobalModeGuard />}>
+              <Route path="/inventory" element={<ProductView />} />   
+              <Route path="/inventory/labels" element={<LabelPrintingView />} />   
+              <Route path="/inventory/transfers" element={<TransfersLayout />} />   
+            </Route>
+            <Route element={<RoleProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
+              <Route path="/inventory/categories" element={<CategoryView />} />   
+              <Route path="/inventory/kardex" element={<KardexView />} />   
+            </Route>
+
+            {/* CAJA Y FINANZAS */}
+            <Route path="/finances" element={<CashRegisterView />} />
+            <Route path="/finances/flow" element={<CashFlowView />} />
+            <Route element={<RoleProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
+              <Route path="/finances/history" element={<TurnHistoryView />} />
+            </Route>
+
+            {/* COMPRAS */}
+            <Route element={<RoleProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
+              <Route path="/compras" element={<SuppliersView />} />
+              <Route path="/compras/history" element={<PurchaseHistoryView />} />
+              <Route path="/compras/payables" element={<AccountsPayableView />} />
+            </Route>
+
+            {/* HISTORIAL */}
+            <Route path="/history" element={<TransactionHistoryView forcedTab="VENTAS" />} />
+            <Route path="/history/quotes" element={<TransactionHistoryView forcedTab="COTIZACIONES" />} />
+
             <Route path="/inventory/product/new" element={<ProductFormView />} />  
             <Route path="/inventory/product/edit/:id" element={<ProductFormView />} />
             <Route path="/inventory/product/:productId/variants" element={<VariantManagerView />} />     
-            <Route path="/promotions" element={<PromotionsPlaceholder />} />
-            <Route path="/finances" element={<FinancesLayout />} />
+            
             <Route path="/customers" element={<CustomersView />} /> 
             <Route path="/customers/profile/:id" element={<CustomerProfileView />} />        
-            <Route path="/history" element={<TransactionHistoryView />} />
 
-            {/* ----------------------------------------------------
-                ZONA VIP (SOLO PARA ADMINISTRADORES)
-                ---------------------------------------------------- */}
+            {/* ZONA VIP ADMINISTRACIÓN */}
             <Route element={<RoleProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
               <Route path="/" element={<DashboardView />} />
-              <Route path="/compras" element={<PurchasesLayout />} /> {/* El cajero no compra mercadería */}
               <Route path="/audit" element={<AuditView />} />
-              <Route path="/settings" element={<SettingsView />} />
               
+              {/* 🚀 SUB-RUTAS DE REPORTES */}
               <Route path="/reports" element={<ReportsLayout />}>
                 <Route index element={<Navigate to="sales" replace />} />
                 <Route path="sales" element={<ReporteVentasView />} />
@@ -121,9 +130,13 @@ export const AppRouter = () => {
                 <Route path="finances" element={<ReporteFinanzasView />} />
                 <Route path="purchases" element={<ReporteComprasView />} />
               </Route>
+
+              {/* 🚀 SUB-RUTAS DE CONFIGURACIÓN */}
+              <Route path="/settings" element={<SettingsView forcedTab="formatos" />} />
+              <Route path="/settings/stores" element={<SettingsView forcedTab="sucursales" />} />
+              <Route path="/settings/users" element={<SettingsView forcedTab="usuarios" />} />
             </Route>
 
-            {/* RUTA DE ESCAPE (404) */}
             <Route path="*" element={<div className="text-red-500 font-bold p-6">Error 404: Módulo no encontrado</div>} />
           </Route>
         </Route>

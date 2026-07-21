@@ -31,6 +31,7 @@ export const TransferDetailsModal = ({ isOpen, onClose, traslado }: TransferDeta
   const totalUnidades = traslado.detalles.reduce((acc, item) => acc + item.cantidad, 0);
   const totalTiposProducto = traslado.detalles.length;
 
+  // 🚀 CORREGIDO: Comparación exacta con 'COMPLETADO' según tu type EstadoTraslado
   const isCompletado = traslado.estadoTraslado === 'COMPLETADO';
   const isPendiente = traslado.estadoTraslado === 'PENDIENTE';
   
@@ -89,7 +90,7 @@ export const TransferDetailsModal = ({ isOpen, onClose, traslado }: TransferDeta
             <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{getStoreName(traslado.tiendaDestinoId)}</p>
             <div className="flex items-center mt-2 text-slate-500 dark:text-slate-400 text-xs">
               <Calendar className="w-3 h-3 mr-1" />
-              {formatDate(traslado.fechaRecepcion) || 'En tránsito...'}
+              {traslado.fechaRecepcion ? formatDate(traslado.fechaRecepcion) : 'En tránsito...'}
             </div>
           </div>
         </div>
@@ -107,27 +108,44 @@ export const TransferDetailsModal = ({ isOpen, onClose, traslado }: TransferDeta
           </div>
           
           <ul className="divide-y divide-slate-100 dark:divide-slate-800 max-h-52 overflow-y-auto">
-            {traslado.detalles.map(d => (
-              <li key={d.id} className="flex justify-between items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <div className="flex-1 pr-4">
-                  <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{formatearDetalle(d)}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-500 font-mono mt-0.5">SKU: {d.sku}</p>
-                </div>
-                <span className="font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
-                  {d.cantidad} und.
-                </span>
-              </li>
-            ))}
+            {traslado.detalles.map(d => {
+              // 🚀 CORREGIDO: Lógica de protección contra campos opcionales del backend
+              const factor = d.factorConversion || 1;
+              const tienePresentacion = factor > 1 && !!d.presentacionNombre;
+              const cantidadEnPresentacion = tienePresentacion ? Math.floor(d.cantidad / factor) : d.cantidad;
+
+              return (
+                <li key={d.id} className="flex justify-between items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <div className="flex-1 pr-4">
+                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{formatearDetalle(d)}</p>
+                    <div className="flex items-center space-x-2 mt-0.5">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">SKU: {d.sku}</span>
+                      {tienePresentacion && (
+                        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                          (Equivale a {d.cantidad} unds. totales)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors text-sm">
+                      {cantidadEnPresentacion} {tienePresentacion ? d.presentacionNombre : 'und.'}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
         {/* NOTAS */}
-        {traslado.notas || traslado.notas ? (
+        {traslado.notas ? (
           <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-lg text-sm text-amber-800 dark:text-amber-400 flex items-start transition-colors">
             <FileText className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
             <div>
               <span className="font-bold block mb-0.5">Notas del envío:</span> 
-              {traslado.notas || traslado.notas}
+              {traslado.notas}
             </div>
           </div>
         ) : null}

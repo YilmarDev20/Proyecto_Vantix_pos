@@ -24,6 +24,8 @@ export interface KardexResponse {
   esAutogenerado: boolean;
   notasInternas: string | null;
   fechaMovimiento: string;
+  presentacionNombre?: string;
+  factorConversion?: number;
 }
 
 export interface AjusteInventario {

@@ -49,7 +49,6 @@ public class TrasladoServiceImpl implements TrasladoService {
         long count = trasladoRepository.count() + 1;
         String correlativo = "TR-" + String.format("%06d", count);
 
-        // ---> DESQUEMADO: Tomamos al autor directamente del Token
         Integer usuarioRealId = SecurityUtils.getUsuarioId();
 
         Traslado traslado = Traslado.builder()
@@ -67,9 +66,12 @@ public class TrasladoServiceImpl implements TrasladoService {
             Variante variante = varianteRepository.findById(detReq.getVarianteId())
                     .orElseThrow(() -> new EntityNotFoundException("Variante no encontrada"));
 
+            // 🚀 ACTUALIZADO: Seteamos la presentación congelada en el detalle
             TrasladoDetalle detalle = TrasladoDetalle.builder()
                     .variante(variante)
                     .cantidad(detReq.getCantidad())
+                    .presentacionNombre(detReq.getPresentacionNombre())
+                    .factorConversion(detReq.getFactorConversion() != null ? detReq.getFactorConversion() : 1)
                     .build();
             traslado.addDetalle(detalle);
 

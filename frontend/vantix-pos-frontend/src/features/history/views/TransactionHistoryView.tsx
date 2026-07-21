@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Receipt, FileText } from 'lucide-react';
 
 import { HistoryService } from '../services/history.api';
 import { QuotesService, type ValidacionCotizacion } from '../services/quotes.api';
@@ -18,7 +17,11 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { TransactionDetailModal } from '../components/TransactionDetailModal';
 import { useStore } from '@/core/store/context/StoreContext';
 
-export const TransactionHistoryView = () => {
+interface TransactionHistoryViewProps {
+  forcedTab?: 'VENTAS' | 'COTIZACIONES';
+}
+
+export const TransactionHistoryView = ({ forcedTab = 'VENTAS' }: TransactionHistoryViewProps) => {
   const navigate = useNavigate();
   const cart = useCart([]);
   const { activeStoreId } = useStore();
@@ -26,7 +29,7 @@ export const TransactionHistoryView = () => {
   const [transacciones, setTransacciones] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [activeTab, setActiveTab] = useState<'VENTAS' | 'COTIZACIONES'>('VENTAS');
+  const [activeTab, setActiveTab] = useState<'VENTAS' | 'COTIZACIONES'>(forcedTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
@@ -44,6 +47,11 @@ export const TransactionHistoryView = () => {
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [dataValidacion, setDataValidacion] = useState<ValidacionCotizacion | null>(null);
   const [cotizacionAValidarId, setCotizacionAValidarId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setActiveTab(forcedTab);
+    setEstadoFiltro('TODOS');
+  }, [forcedTab]);
 
   const cargarHistorial = async () => {
     try {
@@ -82,6 +90,7 @@ export const TransactionHistoryView = () => {
     }
   };
 
+  // 🚀 CORREGIDO: Se quitó el espacio en blanco que rompía la compilación
   const handleConfirmarCargaConFaltantes = () => {
     if (dataValidacion && cotizacionAValidarId) {
       cart.loadQuote(dataValidacion, cotizacionAValidarId);
@@ -178,34 +187,16 @@ export const TransactionHistoryView = () => {
 
   return (
     <div className="p-4 h-full flex flex-col animate-in fade-in duration-300">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-        {/* H1 Adaptado para modo oscuro */}
-        <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 transition-colors">Historial de Transacciones</h1>
-        
-        {/* Selector de pestañas adaptado para modo oscuro */}
-        <div className="flex bg-slate-200 dark:bg-slate-950 p-1 rounded-xl transition-colors w-full md:w-auto">
-          <button 
-            type="button"
-            onClick={() => { setActiveTab('VENTAS'); setEstadoFiltro('TODOS'); }} 
-            className={`flex-1 md:flex-none flex items-center justify-center px-4 py-1.5 rounded-lg font-bold text-sm transition-all ${
-              activeTab === 'VENTAS' 
-                ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' 
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
-          >
-            <Receipt className="w-4 h-4 mr-2 text-primary dark:text-blue-400" /> Ventas Reales
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setActiveTab('COTIZACIONES'); setEstadoFiltro('TODOS'); }} 
-            className={`flex-1 md:flex-none flex items-center justify-center px-4 py-1.5 rounded-lg font-bold text-sm transition-all ${
-              activeTab === 'COTIZACIONES' 
-                ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' 
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
-          >
-            <FileText className="w-4 h-4 mr-2 text-amber-500 dark:text-amber-400" /> Cotizaciones
-          </button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 transition-colors">
+            Historial de {activeTab === 'VENTAS' ? 'Ventas Reales' : 'Cotizaciones'}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 transition-colors">
+            {activeTab === 'VENTAS' 
+              ? 'Consulta el registro de tus transacciones completadas, anulaciones e ingresos de caja.' 
+              : 'Gestión y verificación de proformas emitidas para clientes con carga rápida a caja.'}
+          </p>
         </div>
       </div>
 
@@ -221,14 +212,16 @@ export const TransactionHistoryView = () => {
         activeTab={activeTab}
       />
       
-      <HistoryTable 
-        isLoading={isLoading} 
-        data={dataFiltrada} 
-        activeTab={activeTab} 
-        onOpenDetalle={openDetalleModal} 
-        onOpenAnular={(id) => { setSelectedId(id); setIsAnularModalOpen(true); }}
-        onCobrarCotizacion={handleIntentarCobrar}
-      />
+      <div className="flex-1 overflow-y-auto mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+        <HistoryTable 
+          isLoading={isLoading} 
+          data={dataFiltrada} 
+          activeTab={activeTab} 
+          onOpenDetalle={openDetalleModal} 
+          onOpenAnular={(id) => { setSelectedId(id); setIsAnularModalOpen(true); }}
+          onCobrarCotizacion={handleIntentarCobrar}
+        />
+      </div>
 
       <StockValidationModal 
         isOpen={isStockModalOpen} 

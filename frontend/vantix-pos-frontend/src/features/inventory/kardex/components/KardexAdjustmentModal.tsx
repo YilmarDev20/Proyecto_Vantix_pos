@@ -8,16 +8,22 @@ import type { Variant } from '../../variant/types/variant.types';
 import type { Product } from '@/features/inventory/product/types/product.types';
 import type { AjusteInventario, OrigenMovimiento } from '../types/kardex.types';
 
-import { VariantSearch } from './VariantSearch';
+import { AdvancedProductSearch } from '@/components/ui/AdvancedProductSearch';
 import { AdjustmentTable } from './AdjustmentTable';
 
 import { useStore } from '@/core/store/context/StoreContext';
-import { Store } from 'lucide-react';
+import { Store, Trash2 } from 'lucide-react';
 
 interface KardexAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+interface ItemAjusteExtendida extends AjusteInventario {
+  variant: Variant;
+  factorConversion: number;
+  presentacionNombre: string;
 }
 
 export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdjustmentModalProps) => {
@@ -26,7 +32,7 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
   const [variants, setVariants] = useState<Variant[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
   const [origen, setOrigen] = useState<OrigenMovimiento>('AJUSTE_MANUAL');
-  const [items, setItems] = useState<(AjusteInventario & { variant: Variant })[]>([]);
+  const [items, setItems] = useState<ItemAjusteExtendida[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -73,17 +79,50 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
       toast.info('El producto ya está en la lista de ajuste.');
       return;
     }
-    setItems([...items, { varianteId: variant.id, tipoMovimiento: 'ENTRADA', cantidad: 1, notas: '', variant }]);
+    setItems([...items, { 
+      varianteId: variant.id, 
+      tipoMovimiento: 'ENTRADA', 
+      cantidad: 1, 
+      notas: '', 
+      variant,
+      factorConversion: 1,
+      presentacionNombre: 'Unidades'
+    }]);
   };
 
-  const handleUpdateItem = (index: number, field: keyof AjusteInventario, value: any) => {
+  const handleUpdateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    
+    if (field === 'factorConversion') {
+      const factor = Number(value);
+      const variant = newItems[index].variant;
+      let pNombre = 'Unidades';
+      
+      if (factor > 1 && variant.presentaciones) {
+        const pres = variant.presentaciones.find(p => p.factorConversion === factor);
+        if (pres) pNombre = pres.nombre;
+      }
+      
+      newItems[index] = { 
+        ...newItems[index], 
+        factorConversion: factor,
+        presentacionNombre: pNombre
+      };
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
+    
     setItems(newItems);
   };
 
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleClearAllItems = () => {
+    if (items.length === 0) return;
+    setItems([]);
+    toast.success('Lista de ajuste vaciada');
   };
 
   const handleSubmit = async () => {
@@ -93,8 +132,9 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
     }
 
     for (const item of items) {
-      if (item.tipoMovimiento === 'SALIDA' && item.cantidad > item.variant.stockActual) {
-        toast.error(`Stock insuficiente para retirar ${item.cantidad} de ${item.variant.sku}`);
+      const cantidadFisicaTotal = item.cantidad * item.factorConversion;
+      if (item.tipoMovimiento === 'SALIDA' && cantidadFisicaTotal > item.variant.stockActual) {
+        toast.error(`Stock insuficiente para retirar ${item.cantidad} ${item.presentacionNombre} (${cantidadFisicaTotal} u.) de ${item.variant.sku}`);
         return;
       }
     }
@@ -104,8 +144,13 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
       const payload = {
         tiendaId: activeStoreId || 1,
         origen,
-        ajustes: items.map(({ varianteId, tipoMovimiento, cantidad, notas }) => ({
-          varianteId, tipoMovimiento, cantidad, notas
+        ajustes: items.map(({ varianteId, tipoMovimiento, cantidad, factorConversion, presentacionNombre, notas }) => ({
+          varianteId, 
+          tipoMovimiento, 
+          cantidad: cantidad, // Pasamos la cantidad visual tipeada (ej: 2)
+          presentacionNombre: presentacionNombre || 'Unidades', // Envía el tipo de empaque (ej: Paquete)
+          factorConversion: factorConversion || 1, // Envía el factor de conversión (ej: 500)
+          notas: (notas || '').trim()
         }))
       };
 
@@ -121,12 +166,24 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
   };
 
   const modalTitle = (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="text-slate-800 dark:text-slate-100">Ajuste Masivo de Inventario</span>
-      <span className="flex items-center px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-100 dark:border-blue-900/50 text-[11px] font-black uppercase tracking-widest shadow-sm transition-colors">
-        <Store className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-        {activeStoreName}
-      </span>
+    <div className="flex flex-wrap items-center justify-between w-full pr-6 gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-slate-800 dark:text-slate-100">Ajuste Masivo de Inventario</span>
+        <span className="flex items-center px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-100 dark:border-blue-900/50 text-[11px] font-black uppercase tracking-widest shadow-sm transition-colors">
+          <Store className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+          {activeStoreName}
+        </span>
+      </div>
+
+      {items.length > 0 && (
+        <button
+          onClick={handleClearAllItems}
+          className="flex items-center text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 px-2.5 py-1 rounded-lg transition-colors shadow-sm"
+          type="button"
+        >
+          <Trash2 className="w-3.5 h-3.5 mr-1" /> Vaciar Lista
+        </button>
+      )}
     </div>
   );
 
@@ -139,7 +196,6 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
     >
       <div className="flex flex-col w-full h-full md:h-auto md:min-h-[500px]">
         
-        {/* Selector de Origen */}
         <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0 mb-3 transition-colors">
           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Motivo del movimiento</label>
           <select 
@@ -155,14 +211,14 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
         </div>
 
         <div className="relative z-50 shrink-0 mb-3">
-          <VariantSearch 
-            variants={variants} 
-            onAddVariant={handleAddVariant} 
-            formatName={formatearNombreCompleto} 
+          <AdvancedProductSearch 
+            items={variants} 
+            onSelectItem={handleAddVariant} 
+            customFormatName={formatearNombreCompleto} 
+            placeholder="Escribe palabras desordenadas, códigos o SKUs..."
           />
         </div>
 
-        {/* Contenedor de la tabla */}
         <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 min-h-[250px] transition-colors">
           <AdjustmentTable 
             items={items} 
@@ -172,7 +228,6 @@ export const KardexAdjustmentModal = ({ isOpen, onClose, onSuccess }: KardexAdju
           />
         </div>
 
-        {/* Botones de acción */}
         <div className="flex flex-col-reverse sm:flex-row justify-end sm:space-x-3 pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 gap-2 sm:gap-0 shrink-0 transition-colors">
           <button 
             type="button" 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Plus, Minus, ShoppingCart, AlertTriangle, Package, TrendingUp } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-react';
 import type { CartItem } from '../hooks/useCart';
 import type { Product } from '@/features/inventory/product/types/product.types';
 
@@ -8,10 +8,13 @@ interface CartItemListProps {
   productos: Product[];
   onUpdateQuantity: (varianteId: number, presentacionId: number | undefined, cantidad: number) => void;
   onRemoveItem: (varianteId: number, presentacionId?: number) => void;
+  onChangePresentation: (varianteId: number, oldPresentacionId: number | undefined, newFactor: number) => void;
   onClearCart: () => void;
 }
 
-export const CartItemList = ({ items, productos, onUpdateQuantity, onRemoveItem, onClearCart }: CartItemListProps) => {
+export const CartItemList = ({ 
+  items, productos, onUpdateQuantity, onRemoveItem, onChangePresentation, onClearCart 
+}: CartItemListProps) => {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   const getAtributosString = (atributos: Record<string, any> | null) => {
@@ -103,16 +106,24 @@ export const CartItemList = ({ items, productos, onUpdateQuantity, onRemoveItem,
                       {nombreCompleto}
                     </p>
                     
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      {item.presentacion ? (
-                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center whitespace-nowrap">
-                          <Package className="w-3 h-3 mr-1 shrink-0" /> {item.presentacion.nombre} (x{item.presentacion.factorConversion})
-                        </span>
-                      ) : (
-                        <span className={`text-[10px] font-medium whitespace-nowrap ${hasError ? 'text-red-400 dark:text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
-                          SKU: {item.variante.sku}
-                        </span>
-                      )}
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      {/* 🚀 SELECTOR DINÁMICO EN CALIENTE: Permite cambiar empaques al instante desde el mostrador */}
+                      <select
+                        value={factor}
+                        onChange={(e) => onChangePresentation(item.variante.id, item.presentacion?.id, Number(e.target.value))}
+                        className="text-[10px] p-1 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded font-bold text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-primary outline-none cursor-pointer shadow-sm"
+                      >
+                        <option value={1}>Unidades (x1)</option>
+                        {(item.variante.presentaciones || []).filter(p => p.estado !== false).map((pres, pIdx) => (
+                          <option key={pres.id || pIdx} value={pres.factorConversion}>
+                            {pres.nombre} (x{pres.factorConversion})
+                          </option>
+                        ))}
+                      </select>
+
+                      <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                        Stock Físico: {item.variante.stockActual} u.
+                      </span>
 
                       {upsellHint && (
                         <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 flex items-center bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 whitespace-nowrap">
@@ -154,7 +165,7 @@ export const CartItemList = ({ items, productos, onUpdateQuantity, onRemoveItem,
                         <button onClick={() => onUpdateQuantity(item.variante.id, item.presentacion?.id, item.cantidad + 1)} className="p-1 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm transition-all"><Plus className="w-3 h-3" /></button>
                       </div>
                       <span className={`text-[9px] font-medium mt-0.5 whitespace-nowrap ${hasError ? 'text-red-600 dark:text-red-400 font-bold' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                        Max: {maxLlevables} {item.presentacion ? 'pcks' : 'u'}
+                        Max: {maxLlevables > 0 ? maxLlevables : 0} {item.presentacion ? 'pcks' : 'u'}
                       </span>
                     </div>
                   </td>
@@ -173,7 +184,6 @@ export const CartItemList = ({ items, productos, onUpdateQuantity, onRemoveItem,
         </table>
       </div>
 
-      {/* ✅ SOLUCIÓN AL RECORTE: Modificado de 'absolute' a 'fixed' e incrementado el z-index a 50 con telón oscuro global */}
       {showConfirmClear && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in transition-colors duration-200">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl p-6 text-center max-w-sm transition-colors">

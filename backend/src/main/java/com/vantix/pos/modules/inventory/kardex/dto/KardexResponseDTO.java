@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public class KardexResponseDTO {
     private Integer id;
     private Integer varianteId;
-    private String varianteSku; // Para mostrar rápido en el frontend
+    private String varianteSku;
     private String varianteNombre;
     private TipoMovimiento tipoMovimiento;
     private Integer cantidad;
@@ -20,5 +20,9 @@ public class KardexResponseDTO {
     private String notasInternas;
     private LocalDateTime fechaMovimiento;
     private Integer tiendaId;
-    private String tiendaNombre; // <--- CIRUGÍA: Agregamos el nombre
+    private String tiendaNombre;
+
+    // 🚀 NUEVOS CAMPOS: Viajan al frontend para renderizar el badge
+    private String presentacionNombre;
+    private Integer factorConversion;
 }

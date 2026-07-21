@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { KardexResponse } from '../types/kardex.types';
@@ -43,60 +43,79 @@ export const KardexTable = ({ historial, isLoading, isGlobalMode, getOrigenBadge
                 </td>
               </tr>
             ) : (
-              historial.map((mov) => (
-                <tr key={mov.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="py-4 px-6 text-sm text-slate-600 dark:text-slate-400 font-medium">
-                    {format(new Date(mov.fechaMovimiento), "dd/MM/yy, HH:mm", { locale: es })}
-                  </td>
-                  
-                  {isGlobalMode && (
+              historial.map((mov) => {
+                // 🚀 Calculamos la cantidad visual original (Ej: 500 unidades / factor 500 = 1 paquete)
+                const factor = mov.factorConversion || 1;
+                const cantidadVisual = Math.round(mov.cantidad / factor);
+                const tieneEmpaque = mov.presentacionNombre && factor > 1;
+
+                return (
+                  <tr key={mov.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-4 px-6 text-sm text-slate-600 dark:text-slate-400 font-medium">
+                      {format(new Date(mov.fechaMovimiento), "dd/MM/yy, HH:mm", { locale: es })}
+                    </td>
+                    
+                    {isGlobalMode && (
+                      <td className="py-4 px-6">
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-1 rounded border border-indigo-100 dark:border-indigo-900/30 uppercase tracking-wide" title={mov.tiendaNombre || 'Sin nombre'}>
+                          {formatStoreName(mov.tiendaNombre || 'Matriz')}
+                        </span>
+                      </td>
+                    )}
+
                     <td className="py-4 px-6">
-                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-1 rounded border border-indigo-100 dark:border-indigo-900/30 uppercase tracking-wide" title={mov.tiendaNombre || 'Sin nombre'}>
-                        {formatStoreName(mov.tiendaNombre || 'Matriz')}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight mb-0.5">
+                          {mov.varianteNombre || 'Producto sin nombre'}
+                        </span>
+                        
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                            SKU: {mov.varianteSku}
+                          </span>
+                          
+                          {/* 🚀 BADGE LOGÍSTICO COMPACTO: Muestra el empaque al operador de forma clara sin ensuciar la nota */}
+                          {tieneEmpaque && (
+                            <span className="inline-flex items-center text-[9px] font-black px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 rounded font-sans uppercase">
+                              <Package className="w-2.5 h-2.5 mr-1 shrink-0" />
+                              {cantidadVisual} {mov.presentacionNombre} (x{factor})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-4 px-6 text-center">
+                      {getOrigenBadge(mov.origenMovimiento)}
+                    </td>
+                    
+                    <td className="py-4 px-6 text-center">
+                      {mov.tipoMovimiento === 'ENTRADA' ? (
+                        <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-black text-[10px]"><ArrowDownRight className="w-3 h-3 mr-1" /> ENTRADA</span>
+                      ) : (
+                        <span className="inline-flex items-center text-red-600 dark:text-red-400 font-black text-[10px]"><ArrowUpRight className="w-3 h-3 mr-1" /> SALIDA</span>
+                      )}
+                    </td>
+                    
+                    <td className="py-4 px-6 text-center">
+                      <span className={`text-sm font-black ${mov.tipoMovimiento === 'ENTRADA' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {mov.tipoMovimiento === 'ENTRADA' ? '+' : '-'}{mov.cantidad}
                       </span>
                     </td>
-                  )}
-
-                  <td className="py-4 px-6">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight mb-0.5">
-                        {mov.varianteNombre || 'Producto sin nombre'}
+                    
+                    <td className="py-4 px-6 text-center">
+                      <span className="text-sm font-black text-slate-900 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+                        {mov.stockResultante}
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                        SKU: {mov.varianteSku}
-                      </span>
-                    </div>
-                  </td>
-
-                  <td className="py-4 px-6 text-center">
-                    {getOrigenBadge(mov.origenMovimiento)}
-                  </td>
-                  
-                  <td className="py-4 px-6 text-center">
-                    {mov.tipoMovimiento === 'ENTRADA' ? (
-                      <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-black text-[10px]"><ArrowDownRight className="w-3 h-3 mr-1" /> ENTRADA</span>
-                    ) : (
-                      <span className="inline-flex items-center text-red-600 dark:text-red-400 font-black text-[10px]"><ArrowUpRight className="w-3 h-3 mr-1" /> SALIDA</span>
-                    )}
-                  </td>
-                  
-                  <td className="py-4 px-6 text-center">
-                    <span className={`text-sm font-black ${mov.tipoMovimiento === 'ENTRADA' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {mov.tipoMovimiento === 'ENTRADA' ? '+' : '-'}{mov.cantidad}
-                    </span>
-                  </td>
-                  
-                  <td className="py-4 px-6 text-center">
-                    <span className="text-sm font-black text-slate-900 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
-                      {mov.stockResultante}
-                    </span>
-                  </td>
-                  
-                  <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 max-w-[150px] truncate font-medium" title={mov.notasInternas || ''}>
-                    {mov.notasInternas || '-'}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    
+                    {/* 🚀 COLUMNA NOTES COMPLETAMENTE SAGRADA Y PURA */}
+                    <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 max-w-[150px] truncate font-medium" title={mov.notasInternas || ''}>
+                      {mov.notasInternas || '-'}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

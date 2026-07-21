@@ -21,11 +21,17 @@ public class TrasladoDetalle {
     @JoinColumn(name = "traslado_id", nullable = false)
     private Traslado traslado;
 
-    // Aquí sí hacemos la relación para sacar el nombre, SKU, etc.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variante_id", nullable = false)
     private Variante variante;
 
     @Column(nullable = false)
     private Integer cantidad;
+
+    // 🚀 NUEVOS CAMPOS: Guardan la presentación exacta usada al enviar la mercadería
+    @Column(name = "presentacion_nombre", length = 100)
+    private String presentacionNombre;
+
+    @Column(name = "factor_conversion")
+    private Integer factorConversion;
 }

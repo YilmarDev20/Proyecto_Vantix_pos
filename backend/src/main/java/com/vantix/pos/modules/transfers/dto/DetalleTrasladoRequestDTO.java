@@ -12,4 +12,8 @@ public class DetalleTrasladoRequestDTO {
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser mayor a 0")
     private Integer cantidad;
+
+    // 🚀 NUEVOS CAMPOS: Opcionales para cuando se manden empaques/cajas masivas
+    private String presentacionNombre;
+    private Integer factorConversion;
 }

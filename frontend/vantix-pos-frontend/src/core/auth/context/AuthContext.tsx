@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import type { ReactNode } from 'react'; // <--- CORRECCIÓN AQUÍ: Se importa con 'type'
+import type { ReactNode } from 'react'; 
 import type { User, LoginCredentials } from '../types/auth.types';
 import { AuthService } from '../services/auth.api';
 import { api } from '@/config/api';
@@ -48,6 +48,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
+
+    // 🚀 SOLUCIÓN AQUI: Removemos la bandera del aviso de la tienda al cerrar sesión.
+    // Así, cuando vuelva a iniciar sesión en esta misma pestaña, la alerta saltará de nuevo.
+    sessionStorage.removeItem('hasShownWelcomeStore');
   };
 
   return (

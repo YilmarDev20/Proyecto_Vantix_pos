@@ -37,7 +37,6 @@ public class KardexServiceImpl implements KardexService {
     @Override
     @Transactional(readOnly = true)
     public List<KardexResponseDTO> obtenerHistorialCompleto(Integer tiendaId) {
-        // 1. BUENA PRÁCTICA: Cache de nombres de tiendas para evitar N+1
         Map<Integer, String> nombresTiendas = tiendaRepository.findAll().stream()
                 .collect(Collectors.toMap(Tienda::getId, Tienda::getNombre));
 
@@ -52,7 +51,6 @@ public class KardexServiceImpl implements KardexService {
         return movimientos.stream()
                 .map(this::enriquecerKardexDTO)
                 .peek(dto -> {
-                    // Asignar nombre de tienda desde el mapa en memoria
                     String nombre = nombresTiendas.getOrDefault(dto.getTiendaId(), "Tienda #" + dto.getTiendaId());
                     dto.setTiendaNombre(nombre);
                 })
@@ -68,35 +66,50 @@ public class KardexServiceImpl implements KardexService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * BUENA PRÁCTICA: Método privado para centralizar la construcción del nombre descriptivo.
-     * Así, si cambias el formato del nombre, solo lo haces en un lugar.
-     */
     private KardexResponseDTO enriquecerKardexDTO(InventarioKardex kardex) {
         KardexResponseDTO dto = kardexMapper.toDto(kardex);
         Variante v = kardex.getVariante();
 
-        // Armamos el nombre: "Producto [Marca] - Atributo1 Atributo2"
         StringBuilder sb = new StringBuilder(v.getProducto().getNombre());
-
         if (v.getProducto().getMarca() != null && !v.getProducto().getMarca().isBlank()) {
             sb.append(" [").append(v.getProducto().getMarca()).append("]");
         }
 
         if (v.getAtributos() != null && !v.getAtributos().isEmpty()) {
-            // Unimos los valores de los atributos (Ej: "Rojo XL")
             String attrs = v.getAtributos().values().stream()
                     .map(Object::toString)
                     .filter(val -> !val.isBlank())
                     .collect(Collectors.joining(" "));
-
             if (!attrs.isBlank()) {
                 sb.append(" - ").append(attrs);
             }
         }
-
         dto.setVarianteNombre(sb.toString());
-        dto.setTiendaId(kardex.getTiendaId()); // Aseguramos que el ID viaje para lógica
+        dto.setTiendaId(kardex.getTiendaId());
+
+        // 🚀 EXTRACCIÓN INTELIGENTE: Si la nota interna contiene la firma del empaque, la separamos
+        String notaOriginal = kardex.getNotasInternas();
+        if (notaOriginal != null && notaOriginal.contains("||EMP:")) {
+            try {
+                int indexEmp = notaOriginal.indexOf("||EMP:");
+                String metadata = notaOriginal.substring(indexEmp + 6); // Extrae "Paquete|FAC:500"
+                String[] parts = metadata.split("\\|FAC:");
+
+                dto.setPresentacionNombre(parts[0]);
+                dto.setFactorConversion(Integer.parseInt(parts[1]));
+
+                // Devolvemos la nota limpia del operador a la columna NOTES
+                String notaLimpia = notaOriginal.substring(0, indexEmp).trim();
+                dto.setNotasInternas(notaLimpia.isEmpty() ? "-" : notaLimpia);
+            } catch (Exception e) {
+                dto.setPresentacionNombre(null);
+                dto.setFactorConversion(1);
+            }
+        } else {
+            dto.setPresentacionNombre(null);
+            dto.setFactorConversion(1);
+        }
+
         return dto;
     }
 
@@ -119,13 +132,16 @@ public class KardexServiceImpl implements KardexService {
                             .stockMinimo(5)
                             .build());
 
+            int factor = ajuste.getFactorConversion() != null ? ajuste.getFactorConversion() : 1;
+            int cantidadUnidadesFisicas = ajuste.getCantidad() * factor;
+
             int stockActual = inventario.getStockActual();
             int nuevoStock;
 
             if (ajuste.getTipoMovimiento() == TipoMovimiento.ENTRADA) {
-                nuevoStock = stockActual + ajuste.getCantidad();
+                nuevoStock = stockActual + cantidadUnidadesFisicas;
             } else {
-                nuevoStock = stockActual - ajuste.getCantidad();
+                nuevoStock = stockActual - cantidadUnidadesFisicas;
                 if (nuevoStock < 0) {
                     throw new IllegalArgumentException("Stock local insuficiente para salida en: " + variante.getSku());
                 }
@@ -134,16 +150,21 @@ public class KardexServiceImpl implements KardexService {
             inventario.setStockActual(nuevoStock);
             inventarioTiendaRepository.save(inventario);
 
+            // 🚀 PERSISTENCIA OCULTA: Guardamos la firma al final de la nota usando un separador especial "||EMP:"
+            String notaOperador = (ajuste.getNotas() != null) ? ajuste.getNotas().trim() : "";
+            String empaqueEtiqueta = (ajuste.getPresentacionNombre() != null) ? ajuste.getPresentacionNombre() : "Unidades";
+            String notaFinalConFirma = notaOperador + "||EMP:" + empaqueEtiqueta + "|FAC:" + factor;
+
             InventarioKardex kardex = InventarioKardex.builder()
                     .variante(variante)
                     .tiendaId(tienda.getId())
                     .usuarioId(requestDTO.getUsuarioId() != null ? requestDTO.getUsuarioId() : SecurityUtils.getUsuarioId())
                     .tipoMovimiento(ajuste.getTipoMovimiento())
-                    .cantidad(ajuste.getCantidad())
+                    .cantidad(cantidadUnidadesFisicas)
                     .stockResultante(nuevoStock)
                     .origenMovimiento(requestDTO.getOrigen())
                     .esAutogenerado(false)
-                    .notasInternas(ajuste.getNotas())
+                    .notasInternas(notaFinalConFirma)
                     .build();
 
             kardexRepository.save(kardex);

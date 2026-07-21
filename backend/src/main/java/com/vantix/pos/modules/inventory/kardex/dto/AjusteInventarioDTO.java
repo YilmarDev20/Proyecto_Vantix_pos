@@ -18,4 +18,8 @@ public class AjusteInventarioDTO {
     private Integer cantidad;
 
     private String notas;
+
+    // 🚀 NUEVOS CAMPOS: Para capturar el empaque visual usado desde la tabla del modal
+    private String presentacionNombre;
+    private Integer factorConversion;
 }
