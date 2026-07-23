@@ -10,7 +10,6 @@ public class VarianteResponseDTO {
     private Integer id;
     private Integer productoId;
 
-    // Nombres para mostrar en el Frontend
     private String productoNombre;
     private String marcaNombre;
 
@@ -28,6 +27,8 @@ public class VarianteResponseDTO {
     private String imagenUrl;
     private Boolean estado;
 
+    private Boolean publicadoEnWeb;
+
     private List<PresentacionResDTO> presentaciones;
 
     @Data
@@ -38,5 +39,8 @@ public class VarianteResponseDTO {
         private Integer factorConversion;
         private BigDecimal precioVenta;
         private Boolean estado;
+
+        // 🚀 NUEVO: Respuesta de visibilidad individual para el empaque
+        private Boolean publicadoEnWeb;
     }
 }

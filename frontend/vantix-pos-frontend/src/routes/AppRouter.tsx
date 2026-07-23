@@ -29,7 +29,11 @@ import { AccountsPayableView } from '@/features/purchases/views/AccountsPayableV
 // Módulo Historial
 import { TransactionHistoryView } from '@/features/history/views/TransactionHistoryView';
 
-// 🚀 Módulo Reportes y Configuración distribuidos nativamente
+// Módulo E-Commerce
+import { EcommerceOrdersView } from '@/features/ecommerce-orders/views/EcommerceOrdersView';
+import { WebSettingsView } from '@/features/web-settings/views/WebSettingsView';
+
+// Módulo Reportes y Configuración
 import { ReportsLayout } from '@/features/reports/views/ReportsLayout';
 import { ReporteVentasView } from '@/features/reports/views/ReporteVentasView';
 import { ReporteInventarioView } from '@/features/reports/views/ReporteInventarioView';
@@ -122,7 +126,12 @@ export const AppRouter = () => {
               <Route path="/" element={<DashboardView />} />
               <Route path="/audit" element={<AuditView />} />
               
-              {/* 🚀 SUB-RUTAS DE REPORTES */}
+              {/* SUB-RUTAS DE E-COMMERCE */}
+              <Route path="/ecommerce/orders" element={<EcommerceOrdersView />} />
+              <Route path="/ecommerce/settings" element={<WebSettingsView />} />
+              <Route path="/ecommerce/analytics" element={<div className="p-6 text-slate-300 font-bold">Módulo Analítica Web (En Desarrollo)</div>} />
+
+              {/* SUB-RUTAS DE REPORTES */}
               <Route path="/reports" element={<ReportsLayout />}>
                 <Route index element={<Navigate to="sales" replace />} />
                 <Route path="sales" element={<ReporteVentasView />} />
@@ -131,7 +140,7 @@ export const AppRouter = () => {
                 <Route path="purchases" element={<ReporteComprasView />} />
               </Route>
 
-              {/* 🚀 SUB-RUTAS DE CONFIGURACIÓN */}
+              {/* SUB-RUTAS DE CONFIGURACIÓN */}
               <Route path="/settings" element={<SettingsView forcedTab="formatos" />} />
               <Route path="/settings/stores" element={<SettingsView forcedTab="sucursales" />} />
               <Route path="/settings/users" element={<SettingsView forcedTab="usuarios" />} />

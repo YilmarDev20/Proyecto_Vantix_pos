@@ -54,14 +54,17 @@ public class Variante {
     @Column(name = "precio_oferta", precision = 10, scale = 4)
     private BigDecimal precioOferta;
 
-    // ELIMINAMOS stockActual y stockMinimo. ¡Ahora viven en InventarioTienda!
-
     @Column(name = "imagen_url", columnDefinition = "TEXT")
     private String imagenUrl;
 
     @Column(nullable = false)
     @Builder.Default
     private Boolean estado = true;
+
+    // 🚀 NUEVO: Interruptor individual para el e-commerce
+    @Column(name = "publicado_en_web", nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private Boolean publicadoEnWeb = true;
 
     @OneToMany(mappedBy = "variante", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

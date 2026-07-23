@@ -16,6 +16,10 @@ public class ProductoResponseDTO {
     private String imagenUrl;
     private String marca;
     private Boolean estado;
+
+    // 🚀 NUEVO: Respuesta al frontend del POS ADMIN
+    private Boolean publicadoEnWeb;
+
     private LocalDateTime fechaCreacion;
     private List<PackSurtidoDTO> packsSurtidos;
 }

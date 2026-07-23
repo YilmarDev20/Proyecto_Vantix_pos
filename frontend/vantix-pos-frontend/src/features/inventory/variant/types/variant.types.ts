@@ -5,13 +5,13 @@ export interface Presentacion {
   factorConversion: number;
   precioVenta: number;
   estado?: boolean;
+  publicadoEnWeb?: boolean; // 👈 ¡FALTA ESTA LÍNEA AQUÍ!
 }
 
 export interface Variant {
   id: number;
   productoId: number;
   
-  // ---> AQUÍ ESTÁN LOS CAMPOS QUE FALTABAN PARA QUITAR EL ERROR <---
   productoNombre?: string; 
   marcaNombre?: string;    
   
@@ -28,8 +28,11 @@ export interface Variant {
   stockMinimo: number;
   imagenUrl: string | null;
   estado: boolean;
+
+  // 🚀 NUEVO: Interruptor individual para la variante en el e-commerce
+  publicadoEnWeb: boolean;
+
   presentaciones: Presentacion[];
 }
 
-// También lo omitimos aquí para no pedirlo al crear
 export type VariantRequest = Omit<Variant, 'id' | 'stockActual' | 'costoPromedio' | 'estado' | 'sku' | 'productoNombre' | 'marcaNombre'> & { sku?: string };

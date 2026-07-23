@@ -10,15 +10,14 @@ import type { Variant, VariantRequest } from '../types/variant.types';
 import type { Product } from '../../product/types/product.types';
 
 // Componentes desacoplados de presentación
-import { VariantForm } from '../components/VariantForm';
 import { VariantKPIs } from '../components/VariantKPIs';
 import { VariantFilters } from '../components/VariantFilters';
 import { VariantTable } from '../components/VariantTable';
 import { VariantMobileCards } from '../components/VariantMobileCards';
 import { VariantImageOverlay } from '../components/VariantImageOverlay';
+import { VariantFormView } from './VariantFormView'; // 🚀 NUEVA VISTA PANTALLA COMPLETA
 
 // Componentes comunes UI
-import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useStore } from '@/core/store/context/StoreContext'; 
 import { useAuth } from '@/core/auth/context/AuthContext'; 
@@ -39,7 +38,9 @@ export const VariantManagerView = () => {
   const [packFilter, setPackFilter] = useState<'all' | 'units' | 'packs'>('all');
   const [sortBy, setSortBy] = useState<'none' | 'price-asc' | 'price-desc'>('none');
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // 🚀 CAMBIO CLAVE: Reemplazamos el estado 'isModalOpen' por 'isFormOpen'
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [actionType, setActionType] = useState<'delete' | 'toggle'>('delete');
@@ -70,24 +71,24 @@ export const VariantManagerView = () => {
   useEffect(() => { loadData(); }, [productId, activeStoreId]);
 
   const handleSaveVariant = async (data: VariantRequest) => {
-  try {
-    setIsSubmitting(true);
-    const tiendaIdQuery = activeStoreId || 1; // <--- Esta variable ya existe en tu código
-    if (selectedVariant) {
-      await VariantService.update(selectedVariant.id, data, tiendaIdQuery); // <--- Enviamos tiendaIdQuery
-      toast.success('Variante actualizada con éxito');
-    } else {
-      await VariantService.create(data, tiendaIdQuery); // <--- Enviamos tiendaIdQuery
-      toast.success('Variante creada. SKU Autogenerado con éxito.');
+    try {
+      setIsSubmitting(true);
+      const tiendaIdQuery = activeStoreId || 1;
+      if (selectedVariant) {
+        await VariantService.update(selectedVariant.id, data, tiendaIdQuery);
+        toast.success('Variante actualizada con éxito');
+      } else {
+        await VariantService.create(data, tiendaIdQuery);
+        toast.success('Variante creada. SKU Autogenerado con éxito.');
+      }
+      setIsFormOpen(false); // 🚀 Cerramos el formulario de pantalla completa
+      loadData();
+    } catch (error) {
+      toast.error('Error al guardar la variante');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
-    loadData();
-  } catch (error) {
-    toast.error('Error al guardar la variante');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleConfirmAction = async () => {
     if (!selectedVariant) return;
@@ -114,7 +115,7 @@ export const VariantManagerView = () => {
 
   const handleEditClick = (v: Variant) => {
     setSelectedVariant(v);
-    setIsModalOpen(true);
+    setIsFormOpen(true); // 🚀 Abrir en pantalla completa
   };
 
   const handleToggleClick = (v: Variant) => {
@@ -152,6 +153,21 @@ export const VariantManagerView = () => {
 
   if (isLoading && !product) return <div className="p-8 text-center text-slate-500">Cargando inventario...</div>;
 
+  // 🚀 SI SE HACE CLIC EN CREAR O EDITAR, RENDERIZAMOS LA VISTA COMPLETA (SIN MODAL)
+  if (isFormOpen) {
+    return (
+      <VariantFormView
+        productId={Number(productId)}
+        productName={product?.nombre}
+        initialData={selectedVariant}
+        onSubmit={handleSaveVariant}
+        onBack={() => setIsFormOpen(false)}
+        isLoading={isSubmitting}
+      />
+    );
+  }
+
+  // 🚀 VISTA PRINCIPAL (LISTA / TABLA)
   return (
     <div className="max-w-6xl mx-auto pb-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
@@ -169,7 +185,7 @@ export const VariantManagerView = () => {
         </div>
         
         {isAdmin && (
-          <button type="button" onClick={() => { setSelectedVariant(null); setIsModalOpen(true); }} className="flex items-center justify-center w-full md:w-auto px-4 py-3 md:py-2 bg-primary text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+          <button type="button" onClick={() => { setSelectedVariant(null); setIsFormOpen(true); }} className="flex items-center justify-center w-full md:w-auto px-4 py-3 md:py-2 bg-primary text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm cursor-pointer">
             <Plus className="w-5 h-5 mr-2" /> Agregar Variante / Talla
           </button>
         )}
@@ -210,11 +226,6 @@ export const VariantManagerView = () => {
           onImageZoom={handleImageZoomClick}
         />
       </div>
-
-      {/* FORMULARIO DE VARIANTE EN MODAL */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedVariant ? 'Editar Variante' : 'Nueva Variante / Presentación'} maxWidth="xl">
-        <VariantForm productoId={Number(productId)} initialData={selectedVariant} onSubmit={handleSaveVariant} onCancel={() => setIsModalOpen(false)} isLoading={isSubmitting} />
-      </Modal>
 
       {/* DIÁLOGO DE CONFIRMACIÓN */}
       <ConfirmDialog isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} onConfirm={handleConfirmAction} title={actionType === 'delete' ? 'Eliminar Variante' : 'Cambiar Estado'} message={actionType === 'delete' ? '¿Eliminar permanentemente esta variante de inventario?' : '¿Deseas cambiar el estado de este registro?'} confirmText={actionType === 'delete' ? 'Eliminar' : 'Confirmar'} isDestructive={actionType === 'delete' || (selectedVariant?.estado ?? false)} />

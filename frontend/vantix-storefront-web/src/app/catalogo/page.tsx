@@ -1,5 +1,5 @@
-import CatalogPage from "@/modules/catalog/page/catalog.page";
+import ProductCatalogView from "@/modules/catalog/page/catalog.page";
 
-export default function Page() {
-  return <CatalogPage />;
+export default function CatalogoPage() {
+  return <ProductCatalogView />;
 }

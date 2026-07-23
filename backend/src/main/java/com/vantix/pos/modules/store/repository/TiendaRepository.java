@@ -10,4 +10,5 @@ import java.util.List;
 public interface TiendaRepository extends JpaRepository<Tienda, Integer> {
     // Para quitarle la estrellita a la tienda anterior
     List<Tienda> findByEsPrincipalTrue();
+
 }

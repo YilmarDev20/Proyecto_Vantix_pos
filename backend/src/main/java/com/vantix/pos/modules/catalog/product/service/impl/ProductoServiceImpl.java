@@ -1,7 +1,7 @@
 package com.vantix.pos.modules.catalog.product.service.impl;
 
 import com.vantix.pos.modules.audit.event.AuditoriaEvent;
-import com.vantix.pos.modules.auth.security.SecurityUtils; // ---> IMPORT DE SEGURIDAD
+import com.vantix.pos.modules.auth.security.SecurityUtils;
 import com.vantix.pos.modules.catalog.product.dto.ProductoRequestDTO;
 import com.vantix.pos.modules.catalog.product.dto.ProductoResponseDTO;
 import com.vantix.pos.modules.catalog.product.entity.PackSurtido;
@@ -49,13 +49,20 @@ public class ProductoServiceImpl implements ProductoService {
     public ProductoResponseDTO crear(ProductoRequestDTO requestDTO) {
         Producto producto = productoMapper.toEntity(requestDTO);
         producto.setEstado(true);
-        if(producto.getUnidadMedida() == null) producto.setUnidadMedida(UnidadMedida.NIU);
+        if (producto.getUnidadMedida() == null) producto.setUnidadMedida(UnidadMedida.NIU);
+
+        // 🚀 LÓGICA E-COMMERCE: Asigna true por defecto si viene nulo
+        if (requestDTO.getPublicadoEnWeb() != null) {
+            producto.setPublicadoEnWeb(requestDTO.getPublicadoEnWeb());
+        } else {
+            producto.setPublicadoEnWeb(true);
+        }
+
         asignarCategoria(producto, requestDTO.getCategoriaId());
 
-        // ---> NUEVO LÓGICA: Sincronizar Packs Surtidos (Bidireccionalidad) <---
         if (producto.getPacksSurtidos() != null) {
             producto.getPacksSurtidos().forEach(pack -> {
-                pack.setProducto(producto); // Enlazamos el hijo con el padre
+                pack.setProducto(producto);
                 pack.setEstado(true);
             });
         }
@@ -64,7 +71,7 @@ public class ProductoServiceImpl implements ProductoService {
         ProductoResponseDTO responseDTO = productoMapper.toDto(productoGuardado);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_PRODUCTO").accion("CREAR")
                 .entidadId(productoGuardado.getId())
                 .descripcion("Se creó el producto base: " + productoGuardado.getNombre())
@@ -82,17 +89,19 @@ public class ProductoServiceImpl implements ProductoService {
 
         ProductoResponseDTO fotoAnterior = productoMapper.toDto(producto);
 
-        // MapStruct actualiza los datos básicos del producto
         productoMapper.updateEntityFromDto(requestDTO, producto);
+
+        // 🚀 LÓGICA E-COMMERCE: Actualiza el estado maestro de visibilidad web
+        if (requestDTO.getPublicadoEnWeb() != null) {
+            producto.setPublicadoEnWeb(requestDTO.getPublicadoEnWeb());
+        }
+
         asignarCategoria(producto, requestDTO.getCategoriaId());
 
-        // ---> NUEVA LÓGICA: Sincronizar Packs Surtidos al Actualizar <---
-        // Limpiamos la lista actual (orphanRemoval = true se encarga de borrarlos de la BD)
         if (producto.getPacksSurtidos() != null) {
             producto.getPacksSurtidos().clear();
         }
 
-        // Añadimos los nuevos que vinieron del Request
         if (requestDTO.getPacksSurtidos() != null) {
             requestDTO.getPacksSurtidos().forEach(dto -> {
                 PackSurtido nuevoPack = productoMapper.toPackEntity(dto);
@@ -106,7 +115,7 @@ public class ProductoServiceImpl implements ProductoService {
         ProductoResponseDTO fotoNueva = productoMapper.toDto(productoActualizado);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_PRODUCTO").accion("ACTUALIZAR")
                 .entidadId(productoActualizado.getId())
                 .descripcion("Se actualizó la información del producto base: " + productoActualizado.getNombre())
@@ -128,7 +137,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto productoEliminado = productoRepository.save(producto);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_PRODUCTO").accion("ELIMINAR")
                 .entidadId(productoEliminado.getId())
                 .descripcion("Se eliminó (desactivó) el producto base: " + productoEliminado.getNombre())
@@ -149,7 +158,7 @@ public class ProductoServiceImpl implements ProductoService {
         ProductoResponseDTO fotoNueva = productoMapper.toDto(productoActualizado);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_PRODUCTO").accion("CAMBIO_ESTADO")
                 .entidadId(productoActualizado.getId())
                 .descripcion("Se cambió el estado a " + (productoActualizado.getEstado() ? "ACTIVO" : "INACTIVO") + " del producto base: " + productoActualizado.getNombre())

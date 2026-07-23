@@ -1,4 +1,4 @@
-import { Edit, Power, PowerOff, Trash2, Package, Tag } from 'lucide-react';
+import { Edit, Power, PowerOff, Trash2, Package, Tag, Globe } from 'lucide-react';
 import type { Variant } from '../types/variant.types';
 
 interface VariantTableProps {
@@ -30,7 +30,7 @@ export const VariantTable = ({
             <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase">Empaque</th>
             <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase">Precio (Venta)</th>
             <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase text-center">Stock</th>
-            <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase text-center">Estado</th>
+            <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase text-center">Estado / Web</th>
             {isAdmin && <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase text-center">Acciones</th>}
           </tr>
         </thead>
@@ -96,23 +96,35 @@ export const VariantTable = ({
                 </span>
               </td>
 
-              {/* Estado */}
-              <td className="py-3 px-6 text-center">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.estado ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
-                  {v.estado ? 'Activo' : 'Inactivo'}
-                </span>
+              {/* Estado y Visibilidad E-Commerce */}
+              <td className="py-3 px-6">
+                <div className="flex items-center justify-center space-x-1.5">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${v.estado ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                    {v.estado ? 'Activo' : 'Inactivo'}
+                  </span>
+
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center ${
+                    v.publicadoEnWeb 
+                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
+                      : 'bg-slate-100 text-slate-500'
+                  }`} title={v.publicadoEnWeb ? "Visible en tienda virtual" : "Oculto en tienda virtual"}>
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1 ${v.publicadoEnWeb ? 'bg-indigo-600 animate-pulse' : 'bg-slate-400'}`}></span>
+                    <Globe className="w-3 h-3 mr-1" />
+                    {v.publicadoEnWeb ? 'Web' : 'Oculto'}
+                  </span>
+                </div>
               </td>
               
               {/* Acciones de Administrador */}
               {isAdmin && (
                 <td className="py-3 px-6 flex items-center justify-center space-x-2">
-                  <button type="button" onClick={() => onEdit(v)} className="p-2 text-slate-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors">
+                  <button type="button" onClick={() => onEdit(v)} className="p-2 text-slate-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar Variante">
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => onToggleStatus(v)} className={`p-2 rounded-lg transition-colors ${v.estado ? 'text-slate-400 hover:text-orange-500 hover:bg-orange-50' : 'text-slate-400 hover:text-green-500 hover:bg-green-50'}`}>
+                  <button type="button" onClick={() => onToggleStatus(v)} className={`p-2 rounded-lg transition-colors ${v.estado ? 'text-slate-400 hover:text-orange-500 hover:bg-orange-50' : 'text-slate-400 hover:text-green-500 hover:bg-green-50'}`} title="Cambiar Estado">
                     {v.estado ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                   </button>
-                  <button type="button" onClick={() => onDelete(v)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                  <button type="button" onClick={() => onDelete(v)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar Variante">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </td>

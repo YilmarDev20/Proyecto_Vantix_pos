@@ -1,4 +1,4 @@
-import { Edit, Power, PowerOff, Trash2, Layers, FolderTree, PackagePlus } from 'lucide-react';
+import { Edit, Power, PowerOff, Trash2, Layers, FolderTree, PackagePlus, Globe } from 'lucide-react';
 import type { Product } from '../types/product.types';
 
 interface ProductTableProps {
@@ -30,7 +30,7 @@ export const ProductTable = ({
             <th className="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Producto</th>
             <th className="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Categoría</th>
             <th className="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Marca / Unidad</th>
-            <th className="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase text-center">Estado</th>
+            <th className="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase text-center">Estado / Web</th>
             <th className="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase text-center">Acciones</th>
           </tr>
         </thead>
@@ -84,11 +84,23 @@ export const ProductTable = ({
                   <p className="text-xs text-slate-500 dark:text-slate-500">UoM: {prod.unidadMedida}</p>
                 </td>
 
-                {/* Estado */}
-                <td className="py-4 px-6 text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${prod.estado ? 'bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                    {prod.estado ? 'Activo' : 'Inactivo'}
-                  </span>
+                {/* Estado y Visibilidad E-Commerce */}
+                <td className="py-4 px-6">
+                  <div className="flex items-center justify-center space-x-1.5">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${prod.estado ? 'bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                      {prod.estado ? 'Activo' : 'Inactivo'}
+                    </span>
+
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center ${
+                      prod.publicadoEnWeb 
+                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' 
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    }`} title={prod.publicadoEnWeb ? "Visible en catálogo web" : "Oculto en catálogo web"}>
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1 ${prod.publicadoEnWeb ? 'bg-indigo-600 animate-pulse' : 'bg-slate-400'}`}></span>
+                      <Globe className="w-3 h-3 mr-1" />
+                      {prod.publicadoEnWeb ? 'Web' : 'Oculto'}
+                    </span>
+                  </div>
                 </td>
 
                 {/* Acciones */}
@@ -102,10 +114,10 @@ export const ProductTable = ({
                       <button type="button" onClick={() => onEdit(prod.id)} className="p-2 text-slate-400 hover:text-primary dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Editar Producto Padre">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button type="button" onClick={() => onToggleStatus(prod)} className={`p-2 rounded-lg transition-colors ${prod.estado ? 'text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-slate-800' : 'text-slate-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-slate-800'}`}>
+                      <button type="button" onClick={() => onToggleStatus(prod)} className={`p-2 rounded-lg transition-colors ${prod.estado ? 'text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-slate-800' : 'text-slate-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-slate-800'}`} title="Cambiar Estado">
                         {prod.estado ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                       </button>
-                      <button type="button" onClick={() => onDelete(prod)} className="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                      <button type="button" onClick={() => onDelete(prod)} className="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Eliminar Producto">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </>

@@ -1,7 +1,7 @@
 package com.vantix.pos.modules.category.service.impl;
 
 import com.vantix.pos.modules.audit.event.AuditoriaEvent;
-import com.vantix.pos.modules.auth.security.SecurityUtils; // ---> IMPORT DE SEGURIDAD
+import com.vantix.pos.modules.auth.security.SecurityUtils;
 import com.vantix.pos.modules.category.dto.CategoriaRequestDTO;
 import com.vantix.pos.modules.category.dto.CategoriaResponseDTO;
 import com.vantix.pos.modules.category.entity.Categoria;
@@ -28,7 +28,9 @@ public class CategoriaServiceImpl implements CategoriaService {
     @Transactional(readOnly = true)
     public List<CategoriaResponseDTO> obtenerTodas() {
         return categoriaRepository.findAll().stream()
-                .map(categoriaMapper::toDto).collect(Collectors.toList());
+                .filter(cat -> Boolean.TRUE.equals(cat.getEstado()))
+                .map(categoriaMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -50,7 +52,7 @@ public class CategoriaServiceImpl implements CategoriaService {
         CategoriaResponseDTO responseDTO = categoriaMapper.toDto(categoriaGuardada);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_CATEGORIA").accion("CREAR")
                 .entidadId(categoriaGuardada.getId())
                 .descripcion("Se creó la categoría: " + categoriaGuardada.getNombre())
@@ -75,7 +77,7 @@ public class CategoriaServiceImpl implements CategoriaService {
         CategoriaResponseDTO fotoNueva = categoriaMapper.toDto(categoriaActualizada);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_CATEGORIA").accion("ACTUALIZAR")
                 .entidadId(categoriaActualizada.getId())
                 .descripcion("Se actualizó la categoría: " + categoriaActualizada.getNombre())
@@ -97,7 +99,7 @@ public class CategoriaServiceImpl implements CategoriaService {
         Categoria categoriaEliminada = categoriaRepository.save(categoria);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_CATEGORIA").accion("ELIMINAR")
                 .entidadId(categoriaEliminada.getId())
                 .descripcion("Se eliminó (desactivó) la categoría: " + categoriaEliminada.getNombre())
@@ -118,7 +120,7 @@ public class CategoriaServiceImpl implements CategoriaService {
         CategoriaResponseDTO fotoNueva = categoriaMapper.toDto(categoriaActualizada);
 
         eventPublisher.publishEvent(AuditoriaEvent.builder()
-                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId()) // ---> DESQUEMADO
+                .usuarioId(SecurityUtils.getUsuarioId()).tiendaId(SecurityUtils.getTiendaId())
                 .modulo("CATALOGO_CATEGORIA").accion("CAMBIO_ESTADO")
                 .entidadId(categoriaActualizada.getId())
                 .descripcion("Se cambió el estado a " + (categoriaActualizada.getEstado() ? "ACTIVO" : "INACTIVO") + " de la categoría: " + categoriaActualizada.getNombre())

@@ -51,13 +51,15 @@ public class Producto {
     @Builder.Default
     private Boolean estado = true;
 
+    // 🚀 NUEVO: Control de visibilidad para el E-Commerce
+    @Column(name = "publicado_en_web", nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private Boolean publicadoEnWeb = true;
+
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
 
-    // ---> NUEVO: Relación One-to-Many con los Packs Surtidos <---
-    // CascadeType.ALL significa que si borras el producto, se borran sus packs.
-    // orphanRemoval = true borra de la BD los packs que quites de esta lista.
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PackSurtido> packsSurtidos;
 }

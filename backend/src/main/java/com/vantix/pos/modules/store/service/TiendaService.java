@@ -12,4 +12,5 @@ public interface TiendaService {
     TiendaResponseDTO actualizar(Integer id, TiendaRequestDTO requestDTO);
     void eliminar(Integer id); // Aquí aplicaremos el Soft Delete
     TiendaResponseDTO cambiarEstado(Integer id); // NUEVO: Para habilitar/deshabilitar
+
 }

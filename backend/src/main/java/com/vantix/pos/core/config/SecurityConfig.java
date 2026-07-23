@@ -20,7 +20,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
@@ -40,7 +39,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 🔓 AGREGAMOS LA RUTA PÚBLICA: Permite acceso al catálogo web sin token JWT
+                        // 🔓 ENDPOINTS PÚBLICOS: Permite creación de pedidos desde Next.js y fotos de comprobantes
                         .requestMatchers("/api/v1/auth/**", "/uploads/**", "/api/v1/public/**").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -55,12 +54,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ AGREGAMOS EL PUERTO LOCAL DE NEXT.JS PARA DESARROLLO WEB
+        // ✅ Orígenes permitidos (POS React + Next.js Web público + Servidor Producción)
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",    // Tu POS interna en React
-                "http://localhost:3000",    // 🔥 NUEVO: Tu catálogo público en Next.js (Desarrollo)
-                "http://159.89.54.99",      // IP de tu servidor
-                "http://www.tudominio.com"  // Tu futuro dominio web comercial
+                "http://localhost:5173",    // Vantix POS Frontend
+                "http://localhost:3000",    // Catálogo e-Commerce Next.js
+                "http://159.89.54.99",      // Servidor Producción
+                "http://www.tudominio.com"
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

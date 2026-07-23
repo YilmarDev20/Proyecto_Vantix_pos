@@ -55,7 +55,6 @@ public class VarianteServiceImpl implements VarianteService {
                 .map(variante -> {
                     VarianteResponseDTO dto = varianteMapper.toDto(variante);
 
-                    // Extraer Inventario (Stock Actual y Mínimo)
                     InventarioTienda inventario = inventarioTiendaRepository
                             .findByVarianteIdAndTiendaId(variante.getId(), tiendaId)
                             .orElse(null);
@@ -105,6 +104,13 @@ public class VarianteServiceImpl implements VarianteService {
         variante.setEstado(true);
         variante.setCostoPromedio(requestDTO.getPrecioCompra());
 
+        // 🚀 LÓGICA E-COMMERCE: Asigna publicadoEnWeb de la Variante
+        if (requestDTO.getPublicadoEnWeb() != null) {
+            variante.setPublicadoEnWeb(requestDTO.getPublicadoEnWeb());
+        } else {
+            variante.setPublicadoEnWeb(true);
+        }
+
         Producto producto = productoRepository.findById(requestDTO.getProductoId())
                 .orElseThrow(() -> new EntityNotFoundException("Producto padre no encontrado con ID: " + requestDTO.getProductoId()));
         variante.setProducto(producto);
@@ -129,6 +135,7 @@ public class VarianteServiceImpl implements VarianteService {
                         .codigoBarras(pReq.getCodigoBarras() != null && !pReq.getCodigoBarras().isBlank() ? pReq.getCodigoBarras() : generarCodigoBarrasUnico())
                         .factorConversion(pReq.getFactorConversion())
                         .precioVenta(pReq.getPrecioVenta())
+                        .publicadoEnWeb(pReq.getPublicadoEnWeb() != null ? pReq.getPublicadoEnWeb() : true) // 🚀 PERSISTENCIA PUBLICADO_EN_WEB
                         .estado(true)
                         .build();
                 variante.addPresentacion(vp);
@@ -187,6 +194,12 @@ public class VarianteServiceImpl implements VarianteService {
         }
 
         varianteMapper.updateEntityFromDto(requestDTO, varianteAnterior);
+
+        // 🚀 LÓGICA E-COMMERCE: Actualiza el estado individual de visibilidad web de la variante
+        if (requestDTO.getPublicadoEnWeb() != null) {
+            varianteAnterior.setPublicadoEnWeb(requestDTO.getPublicadoEnWeb());
+        }
+
         varianteAnterior.setCostoPromedio(requestDTO.getPrecioCompra());
 
         Producto producto = productoRepository.findById(requestDTO.getProductoId())
@@ -211,6 +224,10 @@ public class VarianteServiceImpl implements VarianteService {
                                 vp.setCodigoBarras(pReq.getCodigoBarras() != null && !pReq.getCodigoBarras().isBlank() ? pReq.getCodigoBarras() : vp.getCodigoBarras());
                                 vp.setFactorConversion(pReq.getFactorConversion());
                                 vp.setPrecioVenta(pReq.getPrecioVenta());
+                                // 🚀 ACTUALIZACIÓN PUBLICADO_EN_WEB
+                                if (pReq.getPublicadoEnWeb() != null) {
+                                    vp.setPublicadoEnWeb(pReq.getPublicadoEnWeb());
+                                }
                             });
                 } else {
                     VariantePresentacion vpNuevo = VariantePresentacion.builder()
@@ -218,6 +235,7 @@ public class VarianteServiceImpl implements VarianteService {
                             .codigoBarras(pReq.getCodigoBarras() != null && !pReq.getCodigoBarras().isBlank() ? pReq.getCodigoBarras() : generarCodigoBarrasUnico())
                             .factorConversion(pReq.getFactorConversion())
                             .precioVenta(pReq.getPrecioVenta())
+                            .publicadoEnWeb(pReq.getPublicadoEnWeb() != null ? pReq.getPublicadoEnWeb() : true) // 🚀 PERSISTENCIA PUBLICADO_EN_WEB
                             .estado(true)
                             .build();
                     varianteAnterior.addPresentacion(vpNuevo);

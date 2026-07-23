@@ -30,10 +30,15 @@ public class VariantePresentacion {
     @Column(name = "factor_conversion", nullable = false)
     private Integer factorConversion;
 
-    @Column(name = "precio_venta", nullable = false, precision = 10, scale = 4) // <--- CIRUGÍA AQUÍ
+    @Column(name = "precio_venta", nullable = false, precision = 10, scale = 4)
     private BigDecimal precioVenta;
 
     @Column(nullable = false)
     @Builder.Default
     private Boolean estado = true;
+
+    // 🚀 NUEVO: Switch individual para visibilidad del empaque en la tienda web
+    @Column(name = "publicado_en_web", nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private Boolean publicadoEnWeb = true;
 }

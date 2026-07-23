@@ -27,13 +27,15 @@ public class VarianteRequestDTO {
     private Integer stockMinimo;
     private String imagenUrl;
 
-    // NUEVO: Recibe la lista de presentaciones
+    // Control individual de visibilidad en e-commerce para la variante
+    private Boolean publicadoEnWeb;
+
     @Valid
     private List<PresentacionReqDTO> presentaciones;
 
     @Data
     public static class PresentacionReqDTO {
-        private Integer id; // <--- CIRUGÍA AQUÍ: Agregamos el ID para poder actualizar el empaque existente
+        private Integer id;
         @NotNull
         private String nombre;
         private String codigoBarras;
@@ -41,5 +43,8 @@ public class VarianteRequestDTO {
         private Integer factorConversion;
         @NotNull
         private BigDecimal precioVenta;
+
+        // 🚀 NUEVO: Control de visibilidad para cada empaque
+        private Boolean publicadoEnWeb;
     }
 }

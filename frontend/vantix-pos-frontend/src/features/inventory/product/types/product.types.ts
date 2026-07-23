@@ -1,6 +1,6 @@
 export type UnidadMedida = 'NIU' | 'KGM' | 'LTR' | 'MTR' | 'BX';
 
-// ---> NUEVO: Interface para el Pack Surtido
+// Interface para el Pack Surtido
 export interface PackSurtido {
   id?: number;
   nombre: string;
@@ -19,7 +19,10 @@ export interface Product {
   marca: string | null;
   estado: boolean;
   fechaCreacion: string;
-  // ---> NUEVO: Arreglo de packs que viene del backend
+  
+  // 🚀 NUEVO: Interruptor maestro para el e-commerce
+  publicadoEnWeb: boolean;
+  
   packsSurtidos?: PackSurtido[]; 
 }
 

@@ -7,6 +7,7 @@ import type { Product, ProductRequest } from '../types/product.types';
 
 import { BasicInfoSection } from './form/BasicInfoSection';
 import { ClassificationSection } from './form/ClassificationSection';
+import { EcommerceSection } from './form/EcommerceSection';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 
 const productSchema = z.object({
@@ -17,6 +18,7 @@ const productSchema = z.object({
   categoriaId: z.coerce.number().nullable().optional(), 
   etiquetas: z.array(z.string()).default([]),
   imagenUrl: z.string().optional().nullable(),
+  publicadoEnWeb: z.boolean().default(true), // 🚀 NUEVO EN EL SCHEMA
   packsSurtidos: z.object({
     id: z.number().optional(),
     nombre: z.string().min(2, "El nombre es obligatorio"),
@@ -126,6 +128,7 @@ export const ProductForm = ({ initialData, categories, onSubmit, onCancel, isLoa
       categoriaId: "", 
       etiquetas: [], 
       imagenUrl: '',
+      publicadoEnWeb: true, // 🚀 NUEVO DEFAULT
       packsSurtidos: []
     }
   });
@@ -140,6 +143,7 @@ export const ProductForm = ({ initialData, categories, onSubmit, onCancel, isLoa
         categoriaId: initialData.categoriaId || "",
         etiquetas: initialData.etiquetas || [],
         imagenUrl: initialData.imagenUrl || '',
+        publicadoEnWeb: initialData.publicadoEnWeb ?? true, // 🚀 RECUPERA EL VALOR EXISTENTE
         packsSurtidos: initialData.packsSurtidos || []
       });
     }
@@ -165,6 +169,9 @@ export const ProductForm = ({ initialData, categories, onSubmit, onCancel, isLoa
           <div className="space-y-6">
             <ClassificationSection categories={categories} />
             
+            {/* 🚀 NUEVA SECCIÓN MODULAR DE E-COMMERCE */}
+            <EcommerceSection />
+
             <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">Imagen del Producto</h3>
               <ImageUploader 

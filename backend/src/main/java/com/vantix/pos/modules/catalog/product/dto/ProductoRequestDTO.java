@@ -16,5 +16,8 @@ public class ProductoRequestDTO {
     private String imagenUrl;
     private String marca;
 
+    // 🚀 NUEVO: Control maestro desde el POS ADMIN
+    private Boolean publicadoEnWeb;
+
     private List<PackSurtidoDTO> packsSurtidos;
 }
